@@ -10,10 +10,6 @@ export async function GET(request: NextRequest) {
   }
 
   const symbol = ticker.trim().toUpperCase();
-  const apiKey = process.env.FMP_API_KEY;
-  if (!apiKey) {
-    return NextResponse.json({ error: "FMP_API_KEY not configured" }, { status: 500 });
-  }
 
   // Log the search
   logSearch(symbol).catch(() => {});
@@ -29,7 +25,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const result = await evaluateStock(symbol, apiKey);
+    const result = await evaluateStock(symbol);
 
     // Save to Supabase cache (fire and forget)
     saveEvaluation({
