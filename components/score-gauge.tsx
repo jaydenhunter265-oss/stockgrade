@@ -14,23 +14,12 @@ export default function ScoreGauge({ score, rating, ratingColor, size = 200 }: S
 
   return (
     <div className="flex flex-col items-center relative">
-      {/* Outer glow */}
-      <div
-        className="absolute rounded-full"
-        style={{
-          width: size + 20,
-          height: size + 20,
-          top: -10,
-          left: -10,
-          background: `radial-gradient(circle, ${ratingColor}12 0%, transparent 70%)`,
-        }}
-      />
       <svg width={size} height={size} viewBox="0 0 100 100" className="relative z-10">
         {/* Background ring */}
         <circle
           cx="50" cy="50" r={radius}
           fill="none"
-          stroke="rgba(255,255,255,0.04)"
+          stroke="#27272a"
           strokeWidth="6"
         />
         {/* Glow ring (behind) */}
@@ -44,8 +33,8 @@ export default function ScoreGauge({ score, rating, ratingColor, size = 200 }: S
           strokeLinecap="round"
           transform="rotate(-90 50 50)"
           className="gauge-circle"
-          opacity="0.15"
-          style={{ filter: "blur(4px)" }}
+          opacity="0.12"
+          style={{ filter: "blur(3px)" }}
         />
         {/* Score arc */}
         <circle
@@ -58,13 +47,13 @@ export default function ScoreGauge({ score, rating, ratingColor, size = 200 }: S
           strokeLinecap="round"
           transform="rotate(-90 50 50)"
           className="gauge-circle"
-          style={{ filter: `drop-shadow(0 0 8px ${ratingColor}50)` }}
+          style={{ filter: `drop-shadow(0 0 6px ${ratingColor}40)` }}
         />
         {/* Score number */}
         <text
           x="50" y="42"
           textAnchor="middle"
-          fill="#f5f5f7"
+          fill="#fafafa"
           fontSize="24"
           fontWeight="800"
           fontFamily="var(--font-inter), system-ui"
@@ -76,7 +65,7 @@ export default function ScoreGauge({ score, rating, ratingColor, size = 200 }: S
         <text
           x="50" y="53"
           textAnchor="middle"
-          fill="#636366"
+          fill="#71717a"
           fontSize="6.5"
           fontFamily="var(--font-inter), system-ui"
           fontWeight="500"

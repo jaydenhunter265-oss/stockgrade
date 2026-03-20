@@ -1,9 +1,13 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Only create real client if credentials are configured
+const hasSupabase = supabaseUrl.startsWith("https://") && supabaseAnonKey.length > 0;
+export const supabase: SupabaseClient | null = hasSupabase
+  ? createClient(supabaseUrl, supabaseAnonKey)
+  : null;
 
 export async function saveEvaluation(evaluation: {
   ticker: string;
@@ -13,11 +17,13 @@ export async function saveEvaluation(evaluation: {
   rating: string;
   metrics: object;
 }) {
+  if (!supabase) return;
   const { error } = await supabase.from("evaluations").insert(evaluation);
   if (error) console.error("Supabase insert error:", error);
 }
 
 export async function getCachedEvaluation(ticker: string) {
+  if (!supabase) return null;
   const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
   const { data, error } = await supabase
     .from("evaluations")
@@ -33,10 +39,12 @@ export async function getCachedEvaluation(ticker: string) {
 }
 
 export async function logSearch(ticker: string) {
+  if (!supabase) return;
   await supabase.from("searches").insert({ ticker: ticker.toUpperCase() });
 }
 
 export async function getPopularSearches() {
+  if (!supabase) return [];
   const { data } = await supabase
     .from("searches")
     .select("ticker")

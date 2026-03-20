@@ -4,7 +4,13 @@ import type {
   EvaluationResult,
 } from "./types";
 import { getRatingFromScore } from "./utils";
-import yahooFinance from "yahoo-finance2";
+import YahooFinance from "yahoo-finance2";
+
+// yahoo-finance2 v3 requires instantiation
+const yahooFinance = new YahooFinance({ suppressNotices: ["yahooSurvey"] });
+// Suppress noisy validation warnings in production
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+(yahooFinance as any)._opts.validation.logErrors = false;
 
 function safe(val: unknown): number | null {
   if (val == null || typeof val !== "number" || isNaN(val) || !isFinite(val)) return null;
@@ -142,10 +148,14 @@ async function fetchYahooData(symbol: string): Promise<YahooData> {
   let result: any;
   try {
     result = await yahooFinance.quoteSummary(symbol, { modules: [...modules] });
-  } catch (err) {
+  } catch (err: unknown) {
     console.error("Yahoo Finance quoteSummary failed:", err);
+    const msg = err instanceof Error ? err.message : "";
+    if (msg.includes("Not Found") || msg.includes("404")) {
+      throw new Error(`Ticker "${symbol}" not found. Check the symbol and try again.`);
+    }
     throw new Error(
-      `Could not fetch data for "${symbol}". Please verify the ticker symbol is correct.`
+      `Unable to load data for "${symbol}" right now. Please try again in a moment.`
     );
   }
 
