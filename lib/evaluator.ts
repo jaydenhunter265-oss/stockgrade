@@ -17,12 +17,21 @@ const FMP_BASE = "https://financialmodelingprep.com/api/v3";
 
 async function fmpFetch<T>(endpoint: string, apiKey: string): Promise<T | null> {
   try {
-    const res = await fetch(`${FMP_BASE}${endpoint}${endpoint.includes("?") ? "&" : "?"}apikey=${apiKey}`, {
-      next: { revalidate: 3600 },
-    });
-    if (!res.ok) return null;
-    return res.json();
-  } catch {
+    const url = `${FMP_BASE}${endpoint}${endpoint.includes("?") ? "&" : "?"}apikey=${apiKey}`;
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) {
+      console.error(`FMP API error: ${res.status} ${res.statusText} for ${endpoint}`);
+      return null;
+    }
+    const data = await res.json();
+    // FMP returns error objects like {"Error Message": "..."} on invalid plans/limits
+    if (data && typeof data === "object" && !Array.isArray(data) && ("Error Message" in data || "error" in data)) {
+      console.error(`FMP API error response for ${endpoint}:`, data);
+      return null;
+    }
+    return data as T;
+  } catch (err) {
+    console.error(`FMP fetch failed for ${endpoint}:`, err);
     return null;
   }
 }
@@ -512,7 +521,10 @@ export async function evaluateStock(ticker: string, apiKey: string): Promise<Eva
   const latestCashFlow = cashFlowArr?.[0] ?? null;
 
   if (!profile && !quote) {
-    throw new Error(`Ticker "${symbol}" not found. Please check the symbol and try again.`);
+    throw new Error(
+      `Could not fetch data for "${symbol}". This may be due to FMP API limits on the free plan. ` +
+      `Try again in a moment, or verify your API key at financialmodelingprep.com/developer/docs.`
+    );
   }
 
   const sector = profile?.sector ?? "";
@@ -568,12 +580,26 @@ export async function evaluateStock(ticker: string, apiKey: string): Promise<Eva
     companyName: profile?.companyName ?? quote?.name ?? symbol,
     sector: profile?.sector ?? "",
     industry: profile?.industry ?? "",
+    description: profile?.description ?? "",
+    country: profile?.country ?? "",
+    ipoDate: profile?.ipoDate ?? "",
     price: quote?.price ?? profile?.price ?? 0,
     change: quote?.change ?? profile?.changes ?? 0,
     changePercent: quote?.changesPercentage ?? profile?.changesPercentage ?? 0,
     marketCap: quote?.marketCap ?? profile?.mktCap ?? 0,
     exchange: profile?.exchange ?? quote?.exchange ?? "",
     image: profile?.image ?? "",
+    beta: profile?.beta ?? 0,
+    volume: quote?.volume ?? 0,
+    avgVolume: quote?.avgVolume ?? profile?.volAvg ?? 0,
+    eps: quote?.eps ?? 0,
+    pe: quote?.pe ?? 0,
+    yearHigh: quote?.yearHigh ?? 0,
+    yearLow: quote?.yearLow ?? 0,
+    dayHigh: quote?.dayHigh ?? 0,
+    dayLow: quote?.dayLow ?? 0,
+    open: quote?.open ?? 0,
+    previousClose: quote?.previousClose ?? 0,
     quantScore,
     qualScore: 0,
     finalScore,

@@ -5,7 +5,7 @@ export async function GET(request: NextRequest) {
   const apiKey = process.env.FMP_API_KEY;
 
   if (!apiKey) {
-    return NextResponse.json({ error: "FMP_API_KEY not configured" }, { status: 500 });
+    return NextResponse.json([], { status: 200 });
   }
 
   const endpoint = ticker
@@ -13,11 +13,20 @@ export async function GET(request: NextRequest) {
     : `https://financialmodelingprep.com/api/v3/stock_news?limit=20&apikey=${apiKey}`;
 
   try {
-    const res = await fetch(endpoint, { next: { revalidate: 600 } });
-    if (!res.ok) throw new Error("Failed to fetch news");
+    const res = await fetch(endpoint, { cache: "no-store" });
+    if (!res.ok) {
+      console.error(`FMP news API error: ${res.status} ${res.statusText}`);
+      return NextResponse.json([]);
+    }
     const data = await res.json();
+    // FMP might return error objects instead of arrays
+    if (!Array.isArray(data)) {
+      console.error("FMP news returned non-array:", data);
+      return NextResponse.json([]);
+    }
     return NextResponse.json(data);
-  } catch {
-    return NextResponse.json({ error: "Failed to fetch news" }, { status: 500 });
+  } catch (err) {
+    console.error("News fetch failed:", err);
+    return NextResponse.json([]);
   }
 }

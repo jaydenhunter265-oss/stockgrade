@@ -287,6 +287,21 @@ input:focus {
   box-shadow: 0 0 0 2px rgba(10, 132, 255, 0.3), 0 0 20px rgba(10, 132, 255, 0.1);
 }
 
+/* ======================== Line Clamp ======================== */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
 /* ======================== Selection ======================== */
 ::selection {
   background: rgba(10, 132, 255, 0.3);
