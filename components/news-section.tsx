@@ -31,67 +31,73 @@ export default function NewsSection({ ticker }: { ticker?: string }) {
 
   return (
     <div>
-      <h2
-        className="text-xl font-bold mb-4 flex items-center gap-2"
-        style={{ color: "#fafafa" }}
-      >
-        <span style={{ color: "#3b82f6" }}>&#9679;</span>
-        {ticker ? `${ticker} News` : "Market News"}
-      </h2>
+      <div className="flex items-center gap-3 mb-5">
+        <div
+          className="w-8 h-8 rounded-xl flex items-center justify-center text-sm"
+          style={{ background: "rgba(10, 132, 255, 0.12)", color: "#0a84ff" }}
+        >
+          N
+        </div>
+        <h2 className="text-lg font-bold tracking-tight" style={{ color: "#f5f5f7" }}>
+          {ticker ? `${ticker} News` : "Market News"}
+        </h2>
+      </div>
 
       {loading ? (
         <div className="space-y-3">
           {[1, 2, 3, 4].map((i) => (
             <div
               key={i}
-              className="rounded-xl p-4 shimmer"
-              style={{ height: 88, border: "1px solid #262626" }}
+              className="rounded-2xl shimmer"
+              style={{ height: 90, border: "1px solid rgba(255,255,255,0.04)" }}
             />
           ))}
         </div>
       ) : articles.length === 0 ? (
-        <p style={{ color: "#71717a" }}>No news available.</p>
+        <div
+          className="rounded-2xl p-6 text-center"
+          style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)" }}
+        >
+          <p className="text-sm" style={{ color: "#636366" }}>No news available</p>
+        </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           {articles.slice(0, 12).map((article, i) => (
             <a
               key={i}
               href={article.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="block rounded-xl p-4 transition-colors hover:border-blue-500/30"
-              style={{
-                background: "#141414",
-                border: "1px solid #262626",
-                textDecoration: "none",
-              }}
+              className="block glass-card rounded-2xl p-3.5 transition-all"
+              style={{ textDecoration: "none" }}
             >
               <div className="flex gap-3">
                 {article.image && (
                   <img
                     src={article.image}
                     alt=""
-                    className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
+                    className="w-14 h-14 rounded-xl object-cover flex-shrink-0"
+                    style={{ border: "1px solid rgba(255,255,255,0.04)" }}
                     onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                   />
                 )}
                 <div className="min-w-0 flex-1">
                   <h3
-                    className="text-sm font-semibold mb-1 line-clamp-2"
-                    style={{ color: "#e4e4e7" }}
+                    className="text-[13px] font-semibold mb-1.5 line-clamp-2 leading-snug"
+                    style={{ color: "#e5e5e7" }}
                   >
                     {article.title}
                   </h3>
-                  <div className="flex items-center gap-2 text-xs" style={{ color: "#71717a" }}>
-                    <span>{article.site}</span>
-                    <span>&#183;</span>
+                  <div className="flex items-center gap-2 text-[11px]" style={{ color: "#636366" }}>
+                    <span className="font-medium">{article.site}</span>
+                    <span style={{ opacity: 0.4 }}>|</span>
                     <span>{timeAgo(article.publishedDate)}</span>
                     {article.symbol && (
                       <>
-                        <span>&#183;</span>
+                        <span style={{ opacity: 0.4 }}>|</span>
                         <span
-                          className="px-1.5 py-0.5 rounded text-xs font-mono"
-                          style={{ background: "#1e3a5f", color: "#60a5fa" }}
+                          className="px-1.5 py-0.5 rounded-md text-[10px] font-mono font-semibold"
+                          style={{ background: "rgba(10, 132, 255, 0.1)", color: "#0a84ff" }}
                         >
                           {article.symbol}
                         </span>
