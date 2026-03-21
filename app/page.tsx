@@ -716,6 +716,222 @@ function ScoreInsightsPanel({
   );
 }
 
+/* ══════════════════ Price Outlook Card ══════════════════ */
+
+function PriceOutlookCard({
+  currentPrice,
+  analystTargets,
+  beta,
+}: {
+  currentPrice: number;
+  analystTargets: AnalystTargets | null;
+  beta: number | null | undefined;
+}) {
+  const hasAnalyst = !!(analystTargets?.targetLow && analystTargets?.targetMean && analystTargets?.targetHigh);
+
+  let bear: number, base: number, bull: number, max: number;
+
+  if (hasAnalyst) {
+    bear = analystTargets!.targetLow!;
+    base = analystTargets!.targetMedian ?? analystTargets!.targetMean!;
+    bull = analystTargets!.targetHigh!;
+    max = bull * 1.08;
+  } else {
+    const vol = beta ? Math.min(0.28, Math.max(0.07, Math.abs(beta) * 0.1)) : 0.1;
+    bear = currentPrice * (1 - vol * 1.2);
+    base = currentPrice * (1 + vol * 0.3);
+    bull = currentPrice * (1 + vol * 1.1);
+    max = currentPrice * (1 + vol * 2.0);
+  }
+
+  const minBound = Math.min(bear, currentPrice) * 0.98;
+  const maxBound = max * 1.02;
+  const span = maxBound - minBound;
+
+  const toPos = (v: number) => Math.min(96, Math.max(4, ((v - minBound) / span) * 100));
+  const toPct = (v: number) => ((v - currentPrice) / currentPrice) * 100;
+
+  const scenarios = [
+    { key: "bear", label: "Bear",   price: bear, color: "#ef4444", bg: "rgba(239,68,68,0.07)",   border: "rgba(239,68,68,0.14)" },
+    { key: "base", label: "Base",   price: base, color: "#f59e0b", bg: "rgba(245,158,11,0.07)",  border: "rgba(245,158,11,0.14)" },
+    { key: "bull", label: "Bull",   price: bull, color: "#4ade80", bg: "rgba(74,222,128,0.07)",  border: "rgba(74,222,128,0.14)" },
+    { key: "max",  label: "Max",    price: max,  color: "#10b981", bg: "rgba(16,185,129,0.07)",  border: "rgba(16,185,129,0.14)" },
+  ];
+
+  const currentPos = toPos(currentPrice);
+
+  return (
+    <div className="card rounded-xl p-5">
+      <div className="flex items-center justify-between mb-4">
+        <div className="section-label">Price Outlook</div>
+        <span
+          className="text-[9px] font-mono px-2 py-0.5 rounded"
+          style={{ background: "rgba(255,255,255,0.03)", color: "var(--text-dim)", border: "1px solid var(--border)" }}
+        >
+          {hasAnalyst ? "Analyst Derived" : "Model Projected"}
+        </span>
+      </div>
+
+      {/* Scenario tiles */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-6">
+        {scenarios.map((s) => {
+          const chg = toPct(s.price);
+          return (
+            <div key={s.key} className="rounded-xl p-3.5" style={{ background: s.bg, border: `1px solid ${s.border}` }}>
+              <div className="text-[9px] font-bold uppercase tracking-widest mb-2" style={{ color: s.color }}>{s.label}</div>
+              <div className="text-[15px] font-black font-mono" style={{ color: "var(--text)" }}>
+                ${s.price.toFixed(0)}
+              </div>
+              <div className="text-[11px] font-semibold font-mono mt-0.5" style={{ color: chg < 0 ? "#ef4444" : "#10b981" }}>
+                {chg >= 0 ? "+" : ""}{chg.toFixed(1)}%
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Range bar */}
+      <div className="relative">
+        {/* Track */}
+        <div className="relative h-2 rounded-full" style={{ background: "var(--border)" }}>
+          {/* Colored fill between bear and max */}
+          <div
+            className="absolute h-full rounded-full"
+            style={{
+              left: `${toPos(bear)}%`,
+              width: `${Math.max(0, toPos(max) - toPos(bear))}%`,
+              background: "linear-gradient(90deg, #ef4444, #f59e0b 33%, #4ade80 66%, #10b981)",
+              opacity: 0.45,
+            }}
+          />
+          {/* Tick marks for each scenario */}
+          {scenarios.map((s) => (
+            <div
+              key={s.key}
+              className="absolute top-0 w-px h-2"
+              style={{ left: `${toPos(s.price)}%`, background: s.color }}
+            />
+          ))}
+          {/* Current price marker */}
+          <div
+            className="absolute -top-1"
+            style={{ left: `${currentPos}%`, transform: "translateX(-50%)" }}
+          >
+            <div
+              className="w-4 h-4 rounded-full border-2"
+              style={{ background: "var(--accent)", borderColor: "var(--bg)", boxShadow: "0 0 10px rgba(99,102,241,0.55)" }}
+            />
+          </div>
+        </div>
+
+        {/* Axis labels */}
+        <div className="flex justify-between mt-4 text-[9px] font-mono">
+          <span style={{ color: "#ef4444" }}>Bear ${bear.toFixed(0)}</span>
+          <div className="flex items-center gap-1.5">
+            <div className="w-1.5 h-1.5 rounded-full" style={{ background: "var(--accent)" }} />
+            <span style={{ color: "var(--text-secondary)" }}>Current ${currentPrice.toFixed(2)}</span>
+          </div>
+          <span style={{ color: "#10b981" }}>Max ${max.toFixed(0)}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════ AI Verdict Banner ══════════════════ */
+
+function AIVerdictBanner({
+  ticker,
+  score,
+  totalBuy,
+  totalSell,
+  totalMetrics,
+  categories,
+  analystTargets,
+  currentPrice,
+  ratingColor,
+  rating,
+}: {
+  ticker: string;
+  score: number;
+  totalBuy: number;
+  totalSell: number;
+  totalMetrics: number;
+  categories: CategoryScore[];
+  analystTargets: AnalystTargets | null;
+  currentPrice: number;
+  ratingColor: string;
+  rating: string;
+}) {
+  const sorted = [...categories].sort((a, b) => b.percentage - a.percentage);
+  const strongest = sorted[0];
+  const weakest = sorted[sorted.length - 1];
+  const signalRatio = totalMetrics > 0 ? totalBuy / (totalBuy + totalSell || 1) : 0.5;
+
+  let sentence1 = "";
+  if (score >= 75) {
+    sentence1 = `${ticker} scores in the top tier with exceptional breadth — ${strongest?.name ?? "fundamentals"} leads across evaluated metrics.`;
+  } else if (score >= 55) {
+    sentence1 = `${ticker} shows solid fundamentals with ${totalBuy} buy signals outpacing ${totalSell} sell signals; ${strongest?.name ?? "core metrics"} is a clear standout.`;
+  } else if (score >= 35) {
+    sentence1 = `${ticker} is a mixed picture — ${strongest?.name ?? "select metrics"} is a relative strength while ${weakest?.name ?? "other areas"} remains a risk at ${weakest?.percentage ?? "—"}%.`;
+  } else {
+    sentence1 = `${ticker} faces real fundamental headwinds with ${totalSell} sell signals across ${categories.length} categories; ${weakest?.name ?? "core metrics"} is the primary concern.`;
+  }
+
+  let sentence2 = "";
+  if (analystTargets?.targetMean && currentPrice) {
+    const upside = ((analystTargets.targetMean - currentPrice) / currentPrice) * 100;
+    const recKey = analystTargets.recommendationKey;
+    const recLabel = recKey ? recKey.replace(/_/g, " ") : null;
+    if (upside > 15) {
+      sentence2 = `Analyst consensus is ${recLabel ? `"${recLabel}"` : "positive"} with ${upside.toFixed(0)}% mean upside to the $${analystTargets.targetMean.toFixed(0)} target.`;
+    } else if (upside >= 0) {
+      sentence2 = `Analysts see ${upside.toFixed(0)}% upside to $${analystTargets.targetMean.toFixed(0)}${recLabel ? ` with a "${recLabel}" consensus` : ""}.`;
+    } else {
+      sentence2 = `Analysts price a mean target of $${analystTargets.targetMean.toFixed(0)}, implying ${Math.abs(upside).toFixed(0)}% downside from current levels.`;
+    }
+  } else if (signalRatio >= 0.65) {
+    sentence2 = `Quantitative signals strongly favor the bull case — ${Math.round(signalRatio * 100)}% of evaluated metrics are positive.`;
+  } else if (signalRatio < 0.4) {
+    sentence2 = `The weight of evidence leans bearish — watch for fundamental improvement before adding exposure.`;
+  } else {
+    sentence2 = `Signals are balanced — a measured, selective approach is prudent until a directional catalyst emerges.`;
+  }
+
+  const icon = score >= 75 ? "★" : score >= 55 ? "↑" : score >= 35 ? "≈" : "↓";
+  const iconColor = score >= 75 ? "#22c55e" : score >= 55 ? "#4ade80" : score >= 35 ? "#f59e0b" : "#ef4444";
+
+  return (
+    <div className="rounded-xl p-4 sm:p-5" style={{ background: ratingColor + "06", border: `1px solid ${ratingColor}18` }}>
+      <div className="flex items-start gap-3.5">
+        <div
+          className="w-9 h-9 rounded-xl flex items-center justify-center text-sm font-black flex-shrink-0 mt-0.5"
+          style={{ background: iconColor + "15", color: iconColor }}
+        >
+          {icon}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: ratingColor }}>
+              AI Outlook
+            </span>
+            <span
+              className="text-[9px] font-mono px-1.5 py-0.5 rounded"
+              style={{ background: ratingColor + "10", color: ratingColor }}
+            >
+              {rating}
+            </span>
+          </div>
+          <p className="text-[13px] leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+            {sentence1}{" "}{sentence2}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ══════════════════ Market Pulse Strip ══════════════════ */
 
 function MarketPulseStrip({
@@ -1994,6 +2210,27 @@ export default function HomePage() {
                   </div>
                 </div>
               </div>
+
+              {/* ─── Price Outlook Card ─── */}
+              <PriceOutlookCard
+                currentPrice={result.price}
+                analystTargets={stockDetails?.analystTargets ?? null}
+                beta={result.beta}
+              />
+
+              {/* ─── AI Verdict Banner ─── */}
+              <AIVerdictBanner
+                ticker={result.ticker}
+                score={result.finalScore}
+                totalBuy={totalBuy}
+                totalSell={totalSell}
+                totalMetrics={totalMetrics}
+                categories={result.categories}
+                analystTargets={stockDetails?.analystTargets ?? null}
+                currentPrice={result.price}
+                ratingColor={result.ratingColor}
+                rating={result.rating}
+              />
 
               {/* ─── Price Chart ─── */}
               <PriceChart ticker={result.ticker} currentPrice={result.price} change={result.change} changePercent={result.changePercent} />
