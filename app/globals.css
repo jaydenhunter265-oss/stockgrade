@@ -85,6 +85,17 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 .animate-fade-in {
   animation: fadeIn 0.5s ease-out forwards;
 }
@@ -117,6 +128,17 @@ body {
 .stagger-4 { animation-delay: 200ms; opacity: 0; }
 .stagger-5 { animation-delay: 250ms; opacity: 0; }
 .stagger-6 { animation-delay: 300ms; opacity: 0; }
+
+/* ── Gradient Text ── */
+
+.gradient-text {
+  background: linear-gradient(135deg, var(--accent), var(--blue), #a855f7);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gradientShift 4s ease infinite;
+}
 
 /* ── Search Input ── */
 
@@ -167,7 +189,7 @@ body {
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 12px;
-  transition: border-color 0.2s ease, background 0.2s ease;
+  transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
 }
 
 .card:hover {
@@ -244,6 +266,55 @@ input:focus {
   transform: translateY(-2px);
   border-color: var(--border-hover) !important;
   background: var(--card-hover) !important;
+}
+
+/* ── News Modal ── */
+
+.news-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: modalFadeIn 0.2s ease-out;
+  overflow-y: auto;
+}
+
+.news-modal-content {
+  position: relative;
+  width: 100%;
+  max-width: 800px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+
+/* Mobile full-screen modal */
+@media (max-width: 640px) {
+  .news-modal-overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .news-modal-content {
+    max-width: 100%;
+    max-height: 95vh;
+    border-radius: 16px 16px 0 0;
+    border-bottom: none;
+  }
+}
+
+/* ── Chart ── */
+
+.chart-svg {
+  cursor: crosshair;
 }
 
 /* ── Selection ── */
