@@ -592,6 +592,26 @@ function CategorySummary({ categories }: { categories: CategoryScore[] }) {
 /* ══════════════════ News Modal ══════════════════ */
 
 function NewsModal({ article, onClose }: { article: NewsItem; onClose: () => void }) {
+  const [articleContent, setArticleContent] = useState<string | null>(null);
+  const [contentLoading, setContentLoading] = useState(true);
+  const [fetchFailed, setFetchFailed] = useState(false);
+
+  useEffect(() => {
+    setContentLoading(true);
+    setFetchFailed(false);
+    fetch(`/api/article?url=${encodeURIComponent(article.link)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.content) {
+          setArticleContent(data.content);
+        } else {
+          setFetchFailed(true);
+        }
+      })
+      .catch(() => setFetchFailed(true))
+      .finally(() => setContentLoading(false));
+  }, [article.link]);
+
   return (
     <div className="news-modal-overlay" onClick={onClose}>
       <div className="news-modal-content animate-slide-up" onClick={(e) => e.stopPropagation()}>
@@ -626,15 +646,48 @@ function NewsModal({ article, onClose }: { article: NewsItem; onClose: () => voi
             {article.title}
           </h2>
 
-          {/* Article iframe */}
-          <div className="rounded-xl overflow-hidden mb-6" style={{ border: "1px solid var(--border)" }}>
-            <iframe
-              src={article.link}
-              title={article.title}
-              className="w-full border-0"
-              style={{ height: "60vh", background: "white" }}
-              sandbox="allow-scripts allow-same-origin allow-popups"
-            />
+          {/* Article content */}
+          <div
+            className="rounded-xl p-5 sm:p-6 mb-6"
+            style={{
+              background: "rgba(255,255,255,0.02)",
+              border: "1px solid var(--border)",
+              maxHeight: "60vh",
+              overflowY: "auto",
+            }}
+          >
+            {contentLoading ? (
+              <div className="flex flex-col items-center justify-center py-12 gap-3">
+                <div className="w-6 h-6 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "var(--accent)", borderTopColor: "transparent" }} />
+                <span className="text-[12px]" style={{ color: "var(--text-dim)" }}>Loading article...</span>
+              </div>
+            ) : articleContent ? (
+              <div className="space-y-4">
+                {articleContent.split("\n\n").map((paragraph, i) => (
+                  <p key={i} className="text-[13px] sm:text-[14px] leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+                    {paragraph}
+                  </p>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <div className="text-sm font-medium mb-2" style={{ color: "var(--text-muted)" }}>
+                  {fetchFailed ? "Unable to load article content" : "No content available"}
+                </div>
+                <p className="text-[12px] mb-4" style={{ color: "var(--text-dim)" }}>
+                  This article&apos;s content couldn&apos;t be loaded inline. You can read it on the original site.
+                </p>
+                <a
+                  href={article.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block px-4 py-2 rounded-lg text-sm font-semibold cursor-pointer transition-colors hover:brightness-110"
+                  style={{ background: "var(--accent)", color: "white" }}
+                >
+                  Read on {article.publisher} &#8599;
+                </a>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center justify-between">
@@ -647,6 +700,8 @@ function NewsModal({ article, onClose }: { article: NewsItem; onClose: () => voi
             </button>
             <a
               href={article.link}
+              target="_blank"
+              rel="noopener noreferrer"
               className="px-4 py-2 rounded-lg text-sm font-semibold cursor-pointer transition-colors hover:brightness-110"
               style={{ background: "var(--accent)", color: "white" }}
             >
@@ -715,13 +770,13 @@ function TopStockRow({
       onClick={() => onEvaluate(stock.ticker)}
     >
       <div
-        className="w-6 h-6 rounded flex items-center justify-center text-[11px] font-bold flex-shrink-0"
+        className="w-6 h-6 rounded flex items-center justify-center text-[10px] font-bold flex-shrink-0 font-mono"
         style={{
-          color: type === "buy" ? (rank <= 2 ? "#10b981" : "var(--text-muted)") : rank <= 2 ? "#ef4444" : "var(--text-muted)",
-          background: type === "buy" ? (rank <= 2 ? "rgba(16,185,129,0.1)" : "transparent") : rank <= 2 ? "rgba(239,68,68,0.1)" : "transparent",
+          color: "var(--text-dim)",
+          background: "transparent",
         }}
       >
-        {rank}
+        #{rank}
       </div>
       <div className="flex items-center gap-2.5 flex-1 min-w-0">
         {stock.image && (
@@ -758,8 +813,16 @@ function TopStockRow({
           {stock.changePercent.toFixed(2)}%
         </div>
       </div>
-      <div className="w-9 h-9 rounded-lg flex items-center justify-center text-[13px] font-black flex-shrink-0" style={{ background: stock.ratingColor + "10", color: stock.ratingColor }}>
-        {stock.finalScore}
+      <div
+        className="w-11 h-11 rounded-xl flex flex-col items-center justify-center font-black flex-shrink-0"
+        style={{
+          background: `${stock.ratingColor}12`,
+          border: `1px solid ${stock.ratingColor}25`,
+          color: stock.ratingColor,
+        }}
+      >
+        <span className="text-[15px] leading-none">{stock.finalScore}</span>
+        <span className="text-[7px] font-bold opacity-40 leading-none mt-0.5">/100</span>
       </div>
       <span className="text-[10px] opacity-0 group-hover:opacity-60 transition-opacity" style={{ color: "var(--text-muted)" }}>
         &#8250;
@@ -1101,7 +1164,10 @@ export default function HomePage() {
               <div className="card rounded-xl p-4 sm:p-5 animate-slide-up" style={{ animationDelay: "100ms", animationFillMode: "both" }}>
                 <div className="flex items-center gap-2.5 mb-4 pb-3" style={{ borderBottom: "1px solid var(--border)" }}>
                   <div className="w-2 h-2 rounded-full" style={{ background: "var(--green)" }} />
-                  <h2 className="text-sm font-bold" style={{ color: "var(--text)" }}>Top 5 Highest Rated</h2>
+                  <div>
+                    <h2 className="text-sm font-bold" style={{ color: "var(--text)" }}>Top 5 Highest Rated</h2>
+                    <div className="text-[9px] font-mono mt-0.5" style={{ color: "var(--text-dim)" }}>Ranked 100 → down</div>
+                  </div>
                   <span className="text-[9px] font-bold ml-auto px-2 py-0.5 rounded tracking-wider" style={{ background: "rgba(16,185,129,0.08)", color: "#10b981" }}>
                     BEST BUYS
                   </span>
@@ -1124,7 +1190,10 @@ export default function HomePage() {
               <div className="card rounded-xl p-4 sm:p-5 animate-slide-up" style={{ animationDelay: "200ms", animationFillMode: "both" }}>
                 <div className="flex items-center gap-2.5 mb-4 pb-3" style={{ borderBottom: "1px solid var(--border)" }}>
                   <div className="w-2 h-2 rounded-full" style={{ background: "var(--red)" }} />
-                  <h2 className="text-sm font-bold" style={{ color: "var(--text)" }}>Top 5 Lowest Rated</h2>
+                  <div>
+                    <h2 className="text-sm font-bold" style={{ color: "var(--text)" }}>Top 5 Lowest Rated</h2>
+                    <div className="text-[9px] font-mono mt-0.5" style={{ color: "var(--text-dim)" }}>Ranked 0 → up</div>
+                  </div>
                   <span className="text-[9px] font-bold ml-auto px-2 py-0.5 rounded tracking-wider" style={{ background: "rgba(239,68,68,0.08)", color: "#ef4444" }}>
                     WEAKEST
                   </span>
