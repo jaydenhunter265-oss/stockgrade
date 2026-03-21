@@ -133,6 +133,43 @@ input:focus {
   overflow: hidden;
 }
 
+/* ── Line Clamp 2 ── */
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ── Stock Row Hover ── */
+
+.stock-row {
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.stock-row:hover {
+  background: rgba(255, 255, 255, 0.04) !important;
+}
+
+/* ── Ticker Button Hover ── */
+
+.ticker-btn:hover {
+  border-color: #3b82f6 !important;
+  color: #fafafa !important;
+}
+
+/* ── News Card ── */
+
+.news-card {
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.news-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--border-hover) !important;
+}
+
 /* ── Selection ── */
 
 ::selection {
