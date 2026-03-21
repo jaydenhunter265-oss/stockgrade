@@ -589,6 +589,146 @@ function CategorySummary({ categories }: { categories: CategoryScore[] }) {
   );
 }
 
+/* ══════════════════ Score Insights Panel ══════════════════ */
+
+function ScoreInsightsPanel({
+  categories,
+  score,
+  rating,
+  ratingColor,
+}: {
+  categories: CategoryScore[];
+  score: number;
+  rating: string;
+  ratingColor: string;
+}) {
+  const sorted = [...categories].sort((a, b) => b.percentage - a.percentage);
+  const topCategories = sorted.slice(0, 2).filter((c) => c.percentage >= 60);
+  const weakCategories = sorted.slice(-2).filter((c) => c.percentage < 45);
+  const totalBuy = categories.reduce((s, c) => s + c.metrics.filter((m) => m.score === 1).length, 0);
+  const totalSell = categories.reduce((s, c) => s + c.metrics.filter((m) => m.score === -1).length, 0);
+
+  type Insight = { icon: string; color: string; text: string };
+  const insights: Insight[] = [];
+
+  if (score >= 75) {
+    insights.push({ icon: "★", color: "#22c55e", text: `Outstanding across ${categories.length} categories — institutional-quality fundamentals.` });
+  } else if (score >= 55) {
+    insights.push({ icon: "↑", color: "#4ade80", text: `Solid fundamentals with more strengths than weaknesses — broadly positive outlook.` });
+  } else if (score >= 35) {
+    insights.push({ icon: "≈", color: "#f59e0b", text: `Mixed picture — notable strengths coexist with real risks. Proceed with due diligence.` });
+  } else {
+    insights.push({ icon: "↓", color: "#ef4444", text: `Significant concerns across multiple categories. Caution is strongly advised.` });
+  }
+
+  topCategories.forEach((cat) => {
+    const buyCount = cat.metrics.filter((m) => m.score === 1).length;
+    insights.push({
+      icon: "✓",
+      color: "#10b981",
+      text: `${cat.name} is a standout at ${cat.percentage}% — ${buyCount} buy signal${buyCount !== 1 ? "s" : ""} confirm strength here.`,
+    });
+  });
+
+  weakCategories.forEach((cat) => {
+    const sellCount = cat.metrics.filter((m) => m.score === -1).length;
+    if (sellCount > 0) {
+      insights.push({
+        icon: "!",
+        color: "#ef4444",
+        text: `${cat.name} scores only ${cat.percentage}% — ${sellCount} red flag${sellCount !== 1 ? "s" : ""} raise concern.`,
+      });
+    }
+  });
+
+  if (totalBuy > 0 || totalSell > 0) {
+    if (totalBuy >= totalSell * 2) {
+      insights.push({ icon: "→", color: "#6366f1", text: `Signal distribution is bullish: ${totalBuy} buy vs ${totalSell} sell across all metrics.` });
+    } else if (totalSell > totalBuy) {
+      insights.push({ icon: "→", color: "#f97316", text: `Signal distribution leans bearish: ${totalSell} sell vs ${totalBuy} buy across all metrics.` });
+    }
+  }
+
+  if (insights.length === 0) return null;
+
+  return (
+    <div className="card rounded-xl p-5">
+      <div className="flex items-center gap-2.5 mb-4">
+        <div className="section-label">Score Insights</div>
+        <span className="text-[10px] font-bold px-2 py-0.5 rounded" style={{ background: ratingColor + "12", color: ratingColor }}>
+          {rating}
+        </span>
+      </div>
+      <div className="space-y-2">
+        {insights.map((insight, i) => (
+          <div key={i} className="flex items-start gap-2.5 py-2.5 px-3 rounded-lg" style={{ background: insight.color + "08", border: `1px solid ${insight.color}18` }}>
+            <span className="text-[11px] font-black flex-shrink-0 w-4 text-center mt-px" style={{ color: insight.color }}>
+              {insight.icon}
+            </span>
+            <p className="text-[12px] leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+              {insight.text}
+            </p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════ Market Pulse Strip ══════════════════ */
+
+function MarketPulseStrip({
+  topStocks,
+  onEvaluate,
+}: {
+  topStocks: { topBuy: TopStockItem[]; topSell: TopStockItem[]; all?: TopStockItem[] } | null;
+  onEvaluate: (ticker: string) => void;
+}) {
+  if (!topStocks) return null;
+  const pool = topStocks.all ?? [...topStocks.topBuy, ...topStocks.topSell];
+  const movers = [...pool].sort((a, b) => Math.abs(b.changePercent) - Math.abs(a.changePercent)).slice(0, 6);
+  if (movers.length === 0) return null;
+
+  return (
+    <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 mb-4">
+      <div className="flex items-center gap-2 mb-3">
+        <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: "#10b981" }} />
+        <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--text-dim)" }}>
+          Market Movers
+        </span>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {movers.map((stock) => (
+          <button
+            key={stock.ticker}
+            onClick={() => onEvaluate(stock.ticker)}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-all hover:bg-white/5"
+            style={{ background: "var(--card)", border: "1px solid var(--border)" }}
+          >
+            {stock.image && (
+              <img
+                src={stock.image}
+                alt=""
+                className="w-4 h-4 rounded flex-shrink-0"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = "none";
+                }}
+              />
+            )}
+            <span className="text-[12px] font-mono font-bold" style={{ color: "var(--text)" }}>
+              {stock.ticker}
+            </span>
+            <span className="text-[11px] font-mono font-semibold" style={{ color: stock.changePercent >= 0 ? "#10b981" : "#ef4444" }}>
+              {stock.changePercent >= 0 ? "+" : ""}
+              {stock.changePercent.toFixed(2)}%
+            </span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /* ══════════════════ News Modal ══════════════════ */
 
 function NewsModal({ article, onClose }: { article: NewsItem; onClose: () => void }) {
@@ -871,7 +1011,7 @@ export default function HomePage() {
   const [descExpanded, setDescExpanded] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const [topStocks, setTopStocks] = useState<{ topBuy: TopStockItem[]; topSell: TopStockItem[] } | null>(null);
+  const [topStocks, setTopStocks] = useState<{ topBuy: TopStockItem[]; topSell: TopStockItem[]; all?: TopStockItem[] } | null>(null);
   const [topStocksLoading, setTopStocksLoading] = useState(true);
   const [news, setNews] = useState<NewsItem[]>([]);
   const [newsLoading, setNewsLoading] = useState(true);
@@ -1157,6 +1297,9 @@ export default function HomePage() {
               </div>
             </div>
           </div>
+
+          {/* ═══════ Market Movers ═══════ */}
+          {!topStocksLoading && <MarketPulseStrip topStocks={topStocks} onEvaluate={handleEvaluateDirect} />}
 
           {/* ═══════ Rankings ═══════ */}
           <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 pb-8">
@@ -1458,6 +1601,9 @@ export default function HomePage() {
                 </div>
               </div>
 
+              {/* Score Insights */}
+              <ScoreInsightsPanel categories={result.categories} score={result.finalScore} rating={result.rating} ratingColor={result.ratingColor} />
+
               {/* Signals */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <SignalCard title="Top Buy Signals" metrics={result.topSignals} color="#10b981" icon="&#9650;" />
@@ -1540,6 +1686,39 @@ export default function HomePage() {
                       ))}
                   </div>
                 </div>
+
+                {/* Market Rank in sidebar */}
+                {topStocks?.all && (() => {
+                  const rankIndex = topStocks.all!.findIndex((s) => s.ticker === result.ticker);
+                  if (rankIndex === -1) return null;
+                  const rank = rankIndex + 1;
+                  const total = topStocks.all!.length;
+                  const pct = Math.round(((total - rank) / total) * 100);
+                  return (
+                    <div className="card rounded-xl p-4">
+                      <h3 className="section-label mb-3">Universe Rank</h3>
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="text-2xl font-black font-mono" style={{ color: "var(--accent)" }}>
+                          #{rank}
+                        </div>
+                        <div>
+                          <div className="text-[11px] font-semibold" style={{ color: "var(--text-secondary)" }}>
+                            of {total} stocks
+                          </div>
+                          <div className="text-[10px]" style={{ color: "var(--text-dim)" }}>
+                            Better than {pct}%
+                          </div>
+                        </div>
+                      </div>
+                      <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "var(--border)" }}>
+                        <div
+                          className="h-full rounded-full"
+                          style={{ width: `${pct}%`, background: "linear-gradient(90deg, var(--accent), var(--blue))" }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Analyst Consensus in sidebar */}
                 {stockDetails?.analystTargets?.recommendationKey && (
