@@ -1304,12 +1304,12 @@ function NewsModal({ article, onClose }: { article: NewsItem; onClose: () => voi
 
 function LoadingSkeleton() {
   return (
-    <div className="w-full max-w-6xl mx-auto mt-8 px-6 animate-fade-in">
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-        <div className="lg:col-span-3 space-y-4">
+    <div className="w-full max-w-screen-2xl mx-auto mt-8 px-4 sm:px-8 animate-fade-in">
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+        <div className="xl:col-span-8 space-y-5">
           <div className="shimmer rounded-xl h-64" />
           <div className="shimmer rounded-xl h-80" />
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
               <div key={i} className="shimmer rounded-xl h-20" />
             ))}
@@ -1317,7 +1317,7 @@ function LoadingSkeleton() {
           <div className="shimmer rounded-xl h-48" />
           <div className="shimmer rounded-xl h-32" />
         </div>
-        <div className="space-y-4">
+        <div className="xl:col-span-4 space-y-5">
           <div className="shimmer rounded-xl h-56" />
           <div className="shimmer rounded-xl h-48" />
         </div>
@@ -1560,7 +1560,7 @@ export default function HomePage() {
           WebkitBackdropFilter: "blur(16px)",
         }}
       >
-        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
+        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2.5 cursor-pointer group" onClick={goHome}>
             <div
               className="w-7 h-7 rounded-md flex items-center justify-center text-[11px] font-black text-white"
@@ -1574,21 +1574,26 @@ export default function HomePage() {
           </div>
 
           {searched && (
-            <form onSubmit={handleEvaluate} className="hidden md:flex items-center gap-2 flex-1 max-w-sm mx-8">
+            <form onSubmit={handleEvaluate} className="hidden md:flex items-center gap-2.5 flex-1 max-w-lg mx-8">
               <div className="relative flex-1">
+                <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+                  </svg>
+                </div>
                 <input
                   type="text"
                   value={ticker}
                   onChange={(e) => setTicker(e.target.value.toUpperCase())}
                   placeholder="Search ticker..."
-                  className="w-full px-3 py-1.5 rounded-lg text-[13px] font-mono placeholder:text-zinc-600"
-                  style={{ background: "var(--card)", border: "1px solid var(--border)", color: "var(--text)" }}
+                  className="w-full pl-10 pr-9 py-2.5 rounded-xl text-sm font-mono placeholder:text-zinc-600 transition-all focus:outline-none"
+                  style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-hover)", color: "var(--text)" }}
                 />
                 {ticker && (
                   <button
                     type="button"
                     onClick={() => setTicker("")}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-600 hover:text-white cursor-pointer text-xs"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-600 hover:text-white cursor-pointer text-xs transition-colors"
                   >
                     &#10005;
                   </button>
@@ -1597,10 +1602,10 @@ export default function HomePage() {
               <button
                 type="submit"
                 disabled={loading || !ticker.trim()}
-                className="px-4 py-1.5 rounded-lg text-[13px] font-semibold text-white cursor-pointer disabled:opacity-30"
-                style={{ background: "var(--accent)" }}
+                className="px-6 py-2.5 rounded-xl text-sm font-bold text-white cursor-pointer disabled:opacity-30 transition-all hover:brightness-110 whitespace-nowrap"
+                style={{ background: "linear-gradient(135deg, var(--accent), var(--blue))" }}
               >
-                Go
+                {loading ? <span className="pulse-glow">...</span> : "Analyze"}
               </button>
             </form>
           )}
@@ -1609,8 +1614,8 @@ export default function HomePage() {
             {searched && (
               <button
                 onClick={goHome}
-                className="text-[11px] font-medium px-3 py-1.5 rounded-lg cursor-pointer transition-colors hidden md:block hover:bg-white/5"
-                style={{ color: "var(--text-muted)", border: "1px solid var(--border)" }}
+                className="text-sm font-semibold px-4 py-2 rounded-xl cursor-pointer transition-all hidden md:block hover:bg-white/5"
+                style={{ color: "var(--text-secondary)", border: "1px solid var(--border-hover)" }}
               >
                 &#8592; Home
               </button>
@@ -1719,8 +1724,8 @@ export default function HomePage() {
                         setTicker(t);
                         handleEvaluateDirect(t);
                       }}
-                      className="px-2.5 py-1 rounded-md text-[11px] font-mono font-semibold cursor-pointer transition-colors hover:bg-white/5"
-                      style={{ color: "var(--accent)", border: "1px solid rgba(99,102,241,0.15)" }}
+                      className="px-3.5 py-1.5 rounded-lg text-[12px] font-mono font-bold cursor-pointer transition-all hover:bg-white/5 hover:scale-105"
+                      style={{ color: "var(--accent)", border: "1px solid rgba(99,102,241,0.2)", background: "rgba(99,102,241,0.04)" }}
                     >
                       {t}
                     </button>
@@ -1729,13 +1734,13 @@ export default function HomePage() {
               )}
 
               {/* Popular Tickers */}
-              <div className="mt-5 flex flex-wrap justify-center gap-2 animate-fade-in stagger-3">
+              <div className="mt-5 flex flex-wrap justify-center gap-2.5 animate-fade-in stagger-3">
                 {popular.map((t) => (
                   <button
                     key={t}
                     onClick={() => setTicker(t)}
-                    className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-[12px] sm:text-[13px] font-mono font-semibold cursor-pointer ticker-btn"
-                    style={{ background: "var(--card)", border: "1px solid var(--border)", color: "var(--text-muted)" }}
+                    className="px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl text-[13px] sm:text-sm font-mono font-bold cursor-pointer ticker-btn transition-all hover:scale-105"
+                    style={{ background: "var(--card)", border: "1px solid var(--border-hover)", color: "var(--text-secondary)" }}
                   >
                     {t}
                   </button>
@@ -1837,32 +1842,39 @@ export default function HomePage() {
         </div>
       ) : (
         /* Mobile search bar when in results view */
-        <div className="pt-3 pb-2 relative z-10">
-          <div className="flex gap-2 max-w-lg mx-auto px-4 sm:px-6 md:hidden">
+        <div className="pt-4 pb-3 relative z-10">
+          <div className="flex gap-2.5 max-w-2xl mx-auto px-4 sm:px-6 md:hidden">
             <button
               onClick={goHome}
-              className="px-3 py-3 rounded-xl font-semibold text-sm cursor-pointer"
-              style={{ border: "1px solid var(--border)", color: "var(--text-secondary)" }}
+              className="px-4 py-3 rounded-xl font-bold text-sm cursor-pointer transition-all hover:bg-white/5 flex-shrink-0"
+              style={{ border: "1px solid var(--border-hover)", color: "var(--text-secondary)" }}
             >
               &#8592;
             </button>
-            <form onSubmit={handleEvaluate} className="flex gap-2 flex-1">
-              <input
-                ref={inputRef}
-                type="text"
-                value={ticker}
-                onChange={(e) => setTicker(e.target.value.toUpperCase())}
-                placeholder="Enter ticker..."
-                className="flex-1 px-4 py-3 rounded-xl text-sm font-mono placeholder:text-zinc-600"
-                style={{ background: "var(--card)", border: "1px solid var(--border)", color: "var(--text)" }}
-              />
+            <form onSubmit={handleEvaluate} className="flex gap-2.5 flex-1">
+              <div className="relative flex-1">
+                <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+                  </svg>
+                </div>
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={ticker}
+                  onChange={(e) => setTicker(e.target.value.toUpperCase())}
+                  placeholder="Search ticker..."
+                  className="w-full pl-10 pr-4 py-3 rounded-xl text-sm font-mono placeholder:text-zinc-600 focus:outline-none transition-all"
+                  style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-hover)", color: "var(--text)" }}
+                />
+              </div>
               <button
                 type="submit"
                 disabled={loading || !ticker.trim()}
-                className="px-6 py-3 rounded-xl font-semibold text-white text-sm disabled:opacity-30 cursor-pointer"
-                style={{ background: "var(--accent)" }}
+                className="px-6 py-3 rounded-xl font-bold text-white text-sm disabled:opacity-30 cursor-pointer transition-all hover:brightness-110 whitespace-nowrap flex-shrink-0"
+                style={{ background: "linear-gradient(135deg, var(--accent), var(--blue))" }}
               >
-                {loading ? <span className="pulse-glow">...</span> : "Go"}
+                {loading ? <span className="pulse-glow">...</span> : "Analyze"}
               </button>
             </form>
           </div>
@@ -1887,10 +1899,10 @@ export default function HomePage() {
 
       {/* ══════════════════ Results ══════════════════ */}
       {result && !loading && (
-        <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 pb-16 relative z-10 animate-fade-in">
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-            {/* ──── Main Column (3/4) ──── */}
-            <div className="lg:col-span-3 space-y-4">
+        <div className="w-full max-w-screen-2xl mx-auto px-4 sm:px-8 pb-16 relative z-10 animate-fade-in">
+          <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+            {/* ──── Main Column (8/12) ──── */}
+            <div className="xl:col-span-8 space-y-5">
               {/* Company Header */}
               <div className="card rounded-xl p-5 sm:p-6">
                 <div className="flex flex-col md:flex-row gap-6">
@@ -2117,8 +2129,8 @@ export default function HomePage() {
             </div>
 
             {/* ──── Sidebar ──── */}
-            <div className="lg:col-span-1 space-y-4">
-              <div className="lg:sticky lg:top-16 space-y-4">
+            <div className="xl:col-span-4 space-y-5">
+              <div className="xl:sticky xl:top-20 space-y-5">
                 <div className="card rounded-xl p-4">
                   <h3 className="section-label mb-3">Category Scores</h3>
                   <CategorySummary categories={result.categories} />

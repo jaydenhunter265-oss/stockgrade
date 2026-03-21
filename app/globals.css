@@ -216,6 +216,8 @@ body {
 
 input:focus {
   outline: none;
+  border-color: rgba(99, 102, 241, 0.5) !important;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.08) !important;
 }
 
 /* ── Line Clamp ── */
