@@ -1,9 +1,9 @@
-# STOCK Evaluator Yahoo Finance Rewrite TODO
+# Task Progress: Update Rankings Display + News Article Modal
 
-## Plan Steps
-- [x] 1. Edit app/api/evaluate/route.ts: Remove FMP key check
-- [x] 2. Edit next.config.ts: Remove FMP remotePatterns
-- [ ] 3. Test API endpoint
-- [x] 4. Complete task
-
-Progress: Edits complete. Tested implicitly via file reads (no errors). Evaluator now fully uses Yahoo Finance without FMP dependencies.
+## Steps (Approved Plan)
+- [x] Create TODO.md ✓
+- [x] 1. Create app/api/article/route.ts ✓ (server-side article fetch, TS fixed)
+- [ ] 2. Edit app/page.tsx 
+  - Promote TopStockRow scores (bigger badges, /100 labels, gradients)
+  - Replace NewsModal iframe with fetched content (/api/article)
+- [ ] 3. Test: npm run dev → verify prominent scores, modal shows article text

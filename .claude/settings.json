@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \"console.log\\(require\\(''./node_modules/lightweight-charts/package.json''\\).version\\)\")",
+      "Bash(node -e \"const lc = require\\(''./node_modules/lightweight-charts''\\); console.log\\(Object.keys\\(lc\\).filter\\(k => k.includes\\(''Series''\\) || k === ''createChart'' || k === ''ColorType'' || k === ''CrosshairMode''\\).join\\(''\\\\n''\\)\\)\")",
+      "Bash(node -e \"const lc = require\\(''./node_modules/lightweight-charts''\\); const s = Object.keys\\(lc\\); console.log\\(s.filter\\(k => k.startsWith\\(''I''\\) || k.includes\\(''Type''\\) || k.includes\\(''Time''\\)\\).join\\(''\\\\n''\\)\\)\")"
+    ]
+  }
+}

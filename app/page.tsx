@@ -52,9 +52,50 @@ interface ESGData {
   percentile: number | null;
 }
 
+interface RecommendationTrend {
+  period: string;
+  strongBuy: number;
+  buy: number;
+  hold: number;
+  sell: number;
+  strongSell: number;
+}
+
+interface EarningsPeriod {
+  period: string;
+  endDate: string | null;
+  growth: number | null;
+  earningsEstimate: {
+    avg: number | null;
+    low: number | null;
+    high: number | null;
+    numberOfAnalysts: number | null;
+    yearAgoEps: number | null;
+  };
+  revenueEstimate: {
+    avg: number | null;
+    low: number | null;
+    high: number | null;
+    numberOfAnalysts: number | null;
+    yearAgoRevenue: number | null;
+  };
+}
+
+interface OwnershipData {
+  heldByInsiders: number | null;
+  heldByInstitutions: number | null;
+  shortPercentOfFloat: number | null;
+  sharesShort: number | null;
+  shortRatio: number | null;
+  floatShares: number | null;
+}
+
 interface StockDetails {
   analystTargets: AnalystTargets | null;
   esg: ESGData | null;
+  recommendationTrends: RecommendationTrend[];
+  earningsEstimates: EarningsPeriod[];
+  ownership: OwnershipData | null;
 }
 
 /* ══════════════════ Local Storage ══════════════════ */
@@ -928,6 +969,212 @@ function TechnicalIndicators({ ticker }: { ticker: string }) {
   );
 }
 
+/* ══════════════════ Price Outlook ══════════════════ */
+
+function PriceOutlook({
+  earningsEstimates,
+  recommendationTrends,
+  ownership,
+  currentPrice,
+  analystTargets,
+}: {
+  earningsEstimates: EarningsPeriod[];
+  recommendationTrends: RecommendationTrend[];
+  ownership: OwnershipData | null;
+  currentPrice: number;
+  analystTargets: AnalystTargets | null;
+}) {
+  const hasEarnings = earningsEstimates.some((e) => e.earningsEstimate.avg !== null || e.revenueEstimate.avg !== null);
+  const hasRec = recommendationTrends.length > 0;
+  const hasOwnership = ownership && (ownership.heldByInsiders !== null || ownership.heldByInstitutions !== null || ownership.shortPercentOfFloat !== null);
+
+  if (!hasEarnings && !hasRec && !hasOwnership) return null;
+
+  function periodLabel(period: string): string {
+    switch (period) {
+      case "0q": return "Current Qtr";
+      case "+1q": return "Next Qtr";
+      case "0y": return "Current Year";
+      case "+1y": return "Next Year";
+      default: return period;
+    }
+  }
+
+  // Most recent recommendation trend
+  const latestRec = recommendationTrends[0];
+  const totalRec = latestRec ? latestRec.strongBuy + latestRec.buy + latestRec.hold + latestRec.sell + latestRec.strongSell : 0;
+
+  return (
+    <div className="card rounded-xl p-5 space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="section-label">Price Outlook & Research</div>
+        <span className="text-[9px] font-mono" style={{ color: "var(--text-dim)" }}>Yahoo Finance</span>
+      </div>
+
+      {/* Analyst Recommendation Distribution */}
+      {hasRec && latestRec && totalRec > 0 && (
+        <div>
+          <div className="text-[10px] font-semibold uppercase tracking-widest mb-3" style={{ color: "var(--text-dim)" }}>
+            Analyst Recommendations ({totalRec} analysts)
+          </div>
+          <div className="space-y-1.5">
+            {[
+              { label: "Strong Buy", count: latestRec.strongBuy, color: "#10b981" },
+              { label: "Buy", count: latestRec.buy, color: "#4ade80" },
+              { label: "Hold", count: latestRec.hold, color: "#f59e0b" },
+              { label: "Sell", count: latestRec.sell, color: "#f97316" },
+              { label: "Strong Sell", count: latestRec.strongSell, color: "#ef4444" },
+            ].map(({ label, count, color }) => {
+              const pct = totalRec > 0 ? (count / totalRec) * 100 : 0;
+              if (count === 0) return null;
+              return (
+                <div key={label} className="flex items-center gap-3">
+                  <span className="text-[10px] font-medium w-20 flex-shrink-0" style={{ color: "var(--text-muted)" }}>{label}</span>
+                  <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: "var(--border)" }}>
+                    <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
+                  </div>
+                  <span className="text-[10px] font-mono font-bold w-6 text-right flex-shrink-0" style={{ color }}>{count}</span>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Upside/downside from analyst mean */}
+          {analystTargets?.targetMean && (
+            <div className="mt-3 flex items-center gap-4 text-[11px]">
+              <span style={{ color: "var(--text-dim)" }}>Mean target:</span>
+              <span className="font-mono font-bold" style={{ color: "var(--text-secondary)" }}>${analystTargets.targetMean.toFixed(2)}</span>
+              {(() => {
+                const upside = ((analystTargets.targetMean - currentPrice) / currentPrice) * 100;
+                return (
+                  <span className="font-mono font-bold" style={{ color: upside >= 0 ? "#10b981" : "#ef4444" }}>
+                    {upside >= 0 ? "+" : ""}{upside.toFixed(1)}% from current
+                  </span>
+                );
+              })()}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Earnings Estimates */}
+      {hasEarnings && (
+        <div>
+          <div className="text-[10px] font-semibold uppercase tracking-widest mb-3" style={{ color: "var(--text-dim)" }}>
+            EPS & Revenue Estimates
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-[11px]">
+              <thead>
+                <tr style={{ borderBottom: "1px solid var(--border)" }}>
+                  <th className="text-left pb-2 font-semibold" style={{ color: "var(--text-dim)" }}>Period</th>
+                  <th className="text-right pb-2 font-semibold" style={{ color: "var(--text-dim)" }}>EPS Est.</th>
+                  <th className="text-right pb-2 font-semibold" style={{ color: "var(--text-dim)" }}>Year Ago</th>
+                  <th className="text-right pb-2 font-semibold" style={{ color: "var(--text-dim)" }}>YoY Growth</th>
+                  <th className="text-right pb-2 font-semibold" style={{ color: "var(--text-dim)" }}>Revenue Est.</th>
+                  <th className="text-right pb-2 font-semibold" style={{ color: "var(--text-dim)" }}>Analysts</th>
+                </tr>
+              </thead>
+              <tbody>
+                {earningsEstimates.map((ep, i) => {
+                  const eps = ep.earningsEstimate;
+                  const rev = ep.revenueEstimate;
+                  if (eps.avg === null && rev.avg === null) return null;
+                  const growth = ep.growth ?? (eps.avg !== null && eps.yearAgoEps !== null && eps.yearAgoEps !== 0
+                    ? ((eps.avg - eps.yearAgoEps) / Math.abs(eps.yearAgoEps))
+                    : null);
+                  const growthPositive = growth !== null && growth >= 0;
+                  return (
+                    <tr key={i} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                      <td className="py-2.5 font-semibold" style={{ color: "var(--text-secondary)" }}>
+                        {periodLabel(ep.period)}
+                        {ep.endDate && (
+                          <span className="block text-[9px] font-normal" style={{ color: "var(--text-dim)" }}>
+                            ends {ep.endDate.slice(0, 7)}
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-2.5 text-right font-mono font-bold" style={{ color: "var(--text)" }}>
+                        {eps.avg !== null ? (eps.avg >= 0 ? "$" : "-$") + Math.abs(eps.avg).toFixed(2) : "—"}
+                        {eps.avg !== null && eps.low !== null && eps.high !== null && (
+                          <span className="block text-[9px] font-normal" style={{ color: "var(--text-dim)" }}>
+                            ${eps.low.toFixed(2)} – ${eps.high.toFixed(2)}
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-2.5 text-right font-mono" style={{ color: "var(--text-muted)" }}>
+                        {eps.yearAgoEps !== null ? (eps.yearAgoEps >= 0 ? "$" : "-$") + Math.abs(eps.yearAgoEps).toFixed(2) : "—"}
+                      </td>
+                      <td className="py-2.5 text-right font-mono font-bold" style={{ color: growth === null ? "var(--text-dim)" : growthPositive ? "#10b981" : "#ef4444" }}>
+                        {growth !== null ? `${growthPositive ? "+" : ""}${(growth * 100).toFixed(1)}%` : "—"}
+                      </td>
+                      <td className="py-2.5 text-right font-mono" style={{ color: "var(--text-secondary)" }}>
+                        {rev.avg !== null ? (rev.avg >= 1e9 ? `$${(rev.avg / 1e9).toFixed(1)}B` : `$${(rev.avg / 1e6).toFixed(0)}M`) : "—"}
+                      </td>
+                      <td className="py-2.5 text-right" style={{ color: "var(--text-dim)" }}>
+                        {eps.numberOfAnalysts ?? rev.numberOfAnalysts ?? "—"}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Ownership & Short Interest */}
+      {hasOwnership && (
+        <div>
+          <div className="text-[10px] font-semibold uppercase tracking-widest mb-3" style={{ color: "var(--text-dim)" }}>
+            Ownership & Short Interest
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {ownership!.heldByInsiders !== null && (
+              <div className="rounded-lg p-3" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid var(--border)" }}>
+                <div className="text-[9px] font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--text-dim)" }}>Insider Held</div>
+                <div className="text-base font-black font-mono" style={{ color: ownership!.heldByInsiders > 0.15 ? "#10b981" : "var(--text)" }}>
+                  {(ownership!.heldByInsiders * 100).toFixed(2)}%
+                </div>
+                <div className="h-1 rounded-full mt-1.5" style={{ background: "var(--border)" }}>
+                  <div className="h-full rounded-full" style={{ width: `${Math.min(100, ownership!.heldByInsiders * 100 * 3)}%`, background: "#10b981" }} />
+                </div>
+              </div>
+            )}
+            {ownership!.heldByInstitutions !== null && (
+              <div className="rounded-lg p-3" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid var(--border)" }}>
+                <div className="text-[9px] font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--text-dim)" }}>Institutional</div>
+                <div className="text-base font-black font-mono" style={{ color: ownership!.heldByInstitutions > 0.5 ? "#6366f1" : "var(--text)" }}>
+                  {(ownership!.heldByInstitutions * 100).toFixed(1)}%
+                </div>
+                <div className="h-1 rounded-full mt-1.5" style={{ background: "var(--border)" }}>
+                  <div className="h-full rounded-full" style={{ width: `${Math.min(100, ownership!.heldByInstitutions * 100)}%`, background: "#6366f1" }} />
+                </div>
+              </div>
+            )}
+            {ownership!.shortPercentOfFloat !== null && (
+              <div className="rounded-lg p-3" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid var(--border)" }}>
+                <div className="text-[9px] font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--text-dim)" }}>Short Float</div>
+                <div className="text-base font-black font-mono" style={{ color: ownership!.shortPercentOfFloat > 0.1 ? "#ef4444" : ownership!.shortPercentOfFloat > 0.05 ? "#f59e0b" : "var(--text)" }}>
+                  {(ownership!.shortPercentOfFloat * 100).toFixed(2)}%
+                </div>
+                {ownership!.shortRatio !== null && (
+                  <div className="text-[9px] mt-0.5" style={{ color: "var(--text-dim)" }}>
+                    {ownership!.shortRatio.toFixed(1)}d to cover
+                  </div>
+                )}
+                <div className="h-1 rounded-full mt-1.5" style={{ background: "var(--border)" }}>
+                  <div className="h-full rounded-full" style={{ width: `${Math.min(100, ownership!.shortPercentOfFloat * 500)}%`, background: ownership!.shortPercentOfFloat > 0.1 ? "#ef4444" : "#f59e0b" }} />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ══════════════════ News Modal ══════════════════ */
 
 function NewsModal({ article, onClose }: { article: NewsItem; onClose: () => void }) {
@@ -1761,6 +2008,17 @@ export default function HomePage() {
 
               {/* ─── ESG Risk Assessment ─── */}
               {stockDetails?.esg && <ESGSection esg={stockDetails.esg} />}
+
+              {/* ─── Price Outlook & Research ─── */}
+              {stockDetails && (
+                <PriceOutlook
+                  earningsEstimates={stockDetails.earningsEstimates ?? []}
+                  recommendationTrends={stockDetails.recommendationTrends ?? []}
+                  ownership={stockDetails.ownership ?? null}
+                  currentPrice={result.price}
+                  analystTargets={stockDetails.analystTargets}
+                />
+              )}
 
               {/* Description */}
               {result.description && (

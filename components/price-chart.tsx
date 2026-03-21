@@ -10,6 +10,8 @@ import {
   HistogramSeries,
   LineSeries,
   type IChartApi,
+  type ISeriesApi,
+  type SeriesType,
   type UTCTimestamp,
 } from "lightweight-charts";
 
@@ -57,6 +59,7 @@ export default function PriceChart({ ticker, currentPrice, change, changePercent
 
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
+  const mainSeriesRef = useRef<ISeriesApi<SeriesType> | null>(null);
 
   // Fetch OHLCV data
   useEffect(() => {
@@ -127,11 +130,15 @@ export default function PriceChart({ ticker, currentPrice, change, changePercent
         return;
       }
 
-      // Extract price from whichever series is active
+      // Read price from the tracked main price series only (avoids picking up volume values)
       let price: number | null = null;
-      for (const [, val] of param.seriesData) {
-        if (val && "value" in val) { price = (val as { value: number }).value; break; }
-        if (val && "close" in val) { price = (val as { close: number }).close; break; }
+      if (mainSeriesRef.current) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const val = (param.seriesData as any).get(mainSeriesRef.current);
+        if (val) {
+          if ("close" in val) price = (val as { close: number }).close;
+          else if ("value" in val) price = (val as { value: number }).value;
+        }
       }
       if (price !== null) {
         setHoverPrice(price);
@@ -194,6 +201,7 @@ export default function PriceChart({ ticker, currentPrice, change, changePercent
             close: d.close,
           }))
       );
+      mainSeriesRef.current = cs as ISeriesApi<SeriesType>;
     } else {
       const as = chart.addSeries(AreaSeries, {
         lineColor,
@@ -203,6 +211,7 @@ export default function PriceChart({ ticker, currentPrice, change, changePercent
         priceScaleId: "right",
       });
       as.setData(data.map((d) => ({ time: toUTC(d.date), value: d.close })));
+      mainSeriesRef.current = as as ISeriesApi<SeriesType>;
     }
 
     // SMA overlays (only for daily+ intervals with enough data)
@@ -241,6 +250,7 @@ export default function PriceChart({ ticker, currentPrice, change, changePercent
 
     return () => {
       ro.disconnect();
+      mainSeriesRef.current = null;
       if (chartRef.current) {
         chartRef.current.remove();
         chartRef.current = null;
