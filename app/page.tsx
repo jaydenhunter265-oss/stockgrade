@@ -729,6 +729,205 @@ function MarketPulseStrip({
   );
 }
 
+/* ══════════════════ Technical Indicators ══════════════════ */
+
+interface TechData {
+  ticker: string;
+  rsi: number | null;
+  rsiSignal: "overbought" | "oversold" | "neutral";
+  rsiHistory: { date: string; value: number }[];
+  macd: { macd: number; signal: number; hist: number } | null;
+  macdSignal: "bullish" | "bearish" | "neutral";
+  macdHistory: { date: string; macd: number; signal: number; hist: number }[];
+  error?: string;
+}
+
+function RSIGauge({ value }: { value: number }) {
+  // Clamp to 0-100
+  const pct = Math.min(100, Math.max(0, value));
+  const color = value > 70 ? "#ef4444" : value < 30 ? "#10b981" : "#f59e0b";
+  const label = value > 70 ? "Overbought" : value < 30 ? "Oversold" : "Neutral";
+
+  // Arc parameters
+  const cx = 60, cy = 55, r = 44;
+  const startAngle = 200, endAngle = 340; // degrees, sweeping 140°
+  const sweep = endAngle - startAngle;
+  const angle = startAngle + (pct / 100) * sweep;
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const arcX = (deg: number) => cx + r * Math.cos(toRad(deg));
+  const arcY = (deg: number) => cy + r * Math.sin(toRad(deg));
+
+  // Background arc path
+  const bgPath = `M ${arcX(startAngle)} ${arcY(startAngle)} A ${r} ${r} 0 0 1 ${arcX(endAngle)} ${arcY(endAngle)}`;
+  // Value arc path (large-arc-flag = 0 if sweep < 180, else 1)
+  const valueSweep = (pct / 100) * sweep;
+  const largeArc = valueSweep > 180 ? 1 : 0;
+  const valuePath = pct > 0
+    ? `M ${arcX(startAngle)} ${arcY(startAngle)} A ${r} ${r} 0 ${largeArc} 1 ${arcX(angle)} ${arcY(angle)}`
+    : null;
+
+  return (
+    <div className="flex flex-col items-center">
+      <svg width="120" height="80" viewBox="0 0 120 80">
+        {/* Background arc */}
+        <path d={bgPath} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="8" strokeLinecap="round" />
+        {/* Zone bands */}
+        {/* Oversold zone (0-30) */}
+        {(() => {
+          const endA = startAngle + (30 / 100) * sweep;
+          const p = `M ${arcX(startAngle)} ${arcY(startAngle)} A ${r} ${r} 0 0 1 ${arcX(endA)} ${arcY(endA)}`;
+          return <path d={p} fill="none" stroke="rgba(16,185,129,0.15)" strokeWidth="8" strokeLinecap="round" />;
+        })()}
+        {/* Overbought zone (70-100) */}
+        {(() => {
+          const startA = startAngle + (70 / 100) * sweep;
+          const p = `M ${arcX(startA)} ${arcY(startA)} A ${r} ${r} 0 0 1 ${arcX(endAngle)} ${arcY(endAngle)}`;
+          return <path d={p} fill="none" stroke="rgba(239,68,68,0.15)" strokeWidth="8" strokeLinecap="round" />;
+        })()}
+        {/* Value arc */}
+        {valuePath && (
+          <path d={valuePath} fill="none" stroke={color} strokeWidth="8" strokeLinecap="round" />
+        )}
+        {/* Needle dot */}
+        <circle cx={arcX(angle)} cy={arcY(angle)} r="4" fill={color} />
+        {/* Center value */}
+        <text x={cx} y={cy + 6} textAnchor="middle" fill="white" fontSize="16" fontWeight="900" fontFamily="monospace">
+          {value.toFixed(1)}
+        </text>
+      </svg>
+      <div className="text-[10px] font-bold mt-0 -mt-1" style={{ color }}>{label}</div>
+      <div className="text-[9px] mt-0.5" style={{ color: "var(--text-dim)" }}>RSI (14)</div>
+    </div>
+  );
+}
+
+function MACDDisplay({ macd }: { macd: { macd: number; signal: number; hist: number }; signal: "bullish" | "bearish" | "neutral" }) {
+  const histColor = macd.hist >= 0 ? "#10b981" : "#ef4444";
+  const isBullish = macd.macd > macd.signal;
+  const crossLabel = isBullish ? "Bullish crossover" : "Bearish crossover";
+  const crossColor = isBullish ? "#10b981" : "#ef4444";
+
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-3 gap-2 text-center">
+        <div>
+          <div className="text-[9px] font-semibold uppercase tracking-wider mb-0.5" style={{ color: "var(--text-dim)" }}>MACD</div>
+          <div className="text-[13px] font-black font-mono" style={{ color: macd.macd >= 0 ? "#10b981" : "#ef4444" }}>
+            {macd.macd.toFixed(3)}
+          </div>
+        </div>
+        <div>
+          <div className="text-[9px] font-semibold uppercase tracking-wider mb-0.5" style={{ color: "var(--text-dim)" }}>Signal</div>
+          <div className="text-[13px] font-black font-mono" style={{ color: "var(--text-secondary)" }}>
+            {macd.signal.toFixed(3)}
+          </div>
+        </div>
+        <div>
+          <div className="text-[9px] font-semibold uppercase tracking-wider mb-0.5" style={{ color: "var(--text-dim)" }}>Hist</div>
+          <div className="text-[13px] font-black font-mono" style={{ color: histColor }}>
+            {macd.hist >= 0 ? "+" : ""}{macd.hist.toFixed(3)}
+          </div>
+        </div>
+      </div>
+      <div
+        className="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg text-center"
+        style={{ background: crossColor + "10", color: crossColor, border: `1px solid ${crossColor}20` }}
+      >
+        {crossLabel}
+      </div>
+    </div>
+  );
+}
+
+function TechnicalIndicators({ ticker }: { ticker: string }) {
+  const [data, setData] = useState<TechData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    setData(null);
+    fetch(`/api/technicals?ticker=${ticker}`)
+      .then((r) => r.json())
+      .then((d) => setData(d))
+      .catch(() => setData(null))
+      .finally(() => setLoading(false));
+  }, [ticker]);
+
+  if (loading) {
+    return (
+      <div className="card rounded-xl p-5">
+        <div className="section-label mb-4">Technical Indicators</div>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="shimmer rounded-xl h-28" />
+          <div className="shimmer rounded-xl h-28" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!data || data.error) {
+    return null; // Fail silently — rate limits are expected on free tier
+  }
+
+  return (
+    <div className="card rounded-xl p-5">
+      <div className="flex items-center justify-between mb-4">
+        <div className="section-label">Technical Indicators</div>
+        <span className="text-[9px] font-mono" style={{ color: "var(--text-dim)" }}>
+          Alpha Vantage · cached 24h
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        {/* RSI */}
+        {data.rsi !== null && (
+          <div>
+            <RSIGauge value={data.rsi} />
+            <div className="mt-3 flex justify-between text-[9px] font-mono" style={{ color: "var(--text-dim)" }}>
+              <span>30 Oversold</span>
+              <span>70 Overbought</span>
+            </div>
+          </div>
+        )}
+
+        {/* MACD */}
+        {data.macd && (
+          <div>
+            <div className="text-[10px] font-semibold uppercase tracking-widest mb-3" style={{ color: "var(--text-dim)" }}>
+              MACD (12, 26, 9)
+            </div>
+            <MACDDisplay macd={data.macd} signal={data.macdSignal} />
+          </div>
+        )}
+      </div>
+
+      {/* Interpretation */}
+      {data.rsi !== null && data.macd && (
+        <div
+          className="mt-4 pt-4 text-[11px] leading-relaxed"
+          style={{ borderTop: "1px solid var(--border)", color: "var(--text-secondary)" }}
+        >
+          {data.rsiSignal === "overbought" && data.macdSignal === "bearish" && (
+            <span style={{ color: "#ef4444" }}>⚠ RSI overbought + MACD bearish — potential reversal risk.</span>
+          )}
+          {data.rsiSignal === "oversold" && data.macdSignal === "bullish" && (
+            <span style={{ color: "#10b981" }}>✓ RSI oversold + MACD bullish crossover — potential bounce setup.</span>
+          )}
+          {data.rsiSignal === "neutral" && data.macdSignal === "bullish" && (
+            <span style={{ color: "#10b981" }}>MACD bullish crossover with RSI in neutral zone — momentum building.</span>
+          )}
+          {data.rsiSignal === "neutral" && data.macdSignal === "bearish" && (
+            <span style={{ color: "#f97316" }}>MACD bearish — watch for further weakness while RSI has room to fall.</span>
+          )}
+          {(data.rsiSignal === "neutral" && data.macdSignal === "neutral") && (
+            <span style={{ color: "var(--text-muted)" }}>Technicals are neutral — no strong directional signal at this time.</span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ══════════════════ News Modal ══════════════════ */
 
 function NewsModal({ article, onClose }: { article: NewsItem; onClose: () => void }) {
@@ -1539,6 +1738,9 @@ export default function HomePage() {
 
               {/* ─── Price Chart ─── */}
               <PriceChart ticker={result.ticker} currentPrice={result.price} change={result.change} changePercent={result.changePercent} />
+
+              {/* ─── Technical Indicators (Alpha Vantage) ─── */}
+              <TechnicalIndicators ticker={result.ticker} />
 
               {/* Key Stats */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
