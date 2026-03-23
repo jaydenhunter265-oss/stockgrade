@@ -932,6 +932,398 @@ function AIVerdictBanner({
   );
 }
 
+/* ══════════════════ Insider Trading Panel ══════════════════ */
+
+interface InsiderTrade {
+  filingDate: string | null;
+  transactionDate: string | null;
+  reportingName: string;
+  role: string;
+  typeOfOwner: string;
+  isBuy: boolean;
+  securitiesTransacted: number;
+  price: number | null;
+  value: number;
+  securityName: string;
+  formType: string;
+  link: string | null;
+}
+
+interface InsiderSummary {
+  buyCount: number;
+  sellCount: number;
+  buyValue: number;
+  sellValue: number;
+  sentimentScore: number;
+  clusterBuying: boolean;
+  recentBuyerCount: number;
+}
+
+function fmtVal(v: number): string {
+  if (v >= 1e9) return `$${(v / 1e9).toFixed(1)}B`;
+  if (v >= 1e6) return `$${(v / 1e6).toFixed(1)}M`;
+  if (v >= 1e3) return `$${(v / 1e3).toFixed(0)}K`;
+  return `$${v.toFixed(0)}`;
+}
+
+function InsiderTradingPanel({ ticker }: { ticker: string }) {
+  const [data, setData] = useState<{ trades: InsiderTrade[]; summary: InsiderSummary | null; error?: string } | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    setData(null);
+    fetch(`/api/insider-trades?ticker=${ticker}`)
+      .then((r) => r.json())
+      .then((d) => setData(d))
+      .catch(() => setData({ trades: [], summary: null }))
+      .finally(() => setLoading(false));
+  }, [ticker]);
+
+  if (loading) {
+    return (
+      <div className="card rounded-xl p-5">
+        <div className="section-label mb-4">Insider Activity</div>
+        <div className="space-y-2">
+          {[1, 2, 3, 4].map((i) => <div key={i} className="shimmer rounded-lg h-11" />)}
+        </div>
+      </div>
+    );
+  }
+
+  if (!data || !data.trades?.length) return null;
+
+  const { trades, summary } = data;
+  const sentimentColor = summary
+    ? summary.sentimentScore > 60 ? "#10b981" : summary.sentimentScore < 40 ? "#ef4444" : "#f59e0b"
+    : "#f59e0b";
+
+  return (
+    <div className="card rounded-xl p-5">
+      <div className="flex items-center justify-between mb-4">
+        <div className="section-label">Insider Activity</div>
+        <span className="text-[9px] font-mono" style={{ color: "var(--text-dim)" }}>Form 4 · SEC EDGAR</span>
+      </div>
+
+      {/* Summary tiles */}
+      {summary && (
+        <div className="grid grid-cols-3 gap-3 mb-5">
+          {/* Sentiment */}
+          <div className="rounded-xl p-3.5" style={{ background: sentimentColor + "08", border: `1px solid ${sentimentColor}18` }}>
+            <div className="text-[9px] font-bold uppercase tracking-widest mb-1.5" style={{ color: sentimentColor }}>
+              Insider Sentiment
+            </div>
+            <div className="text-2xl font-black font-mono leading-none mb-1" style={{ color: sentimentColor }}>
+              {summary.sentimentScore}
+            </div>
+            <div className="text-[9px]" style={{ color: "var(--text-muted)" }}>
+              {summary.sentimentScore > 60 ? "Bullish" : summary.sentimentScore < 40 ? "Bearish" : "Neutral"}
+            </div>
+            <div className="h-1 rounded-full mt-2" style={{ background: "var(--border)" }}>
+              <div className="h-full rounded-full" style={{ width: `${summary.sentimentScore}%`, background: sentimentColor }} />
+            </div>
+          </div>
+
+          {/* Buys */}
+          <div className="rounded-xl p-3.5" style={{ background: "rgba(16,185,129,0.05)", border: "1px solid rgba(16,185,129,0.12)" }}>
+            <div className="text-[9px] font-bold uppercase tracking-widest mb-1.5" style={{ color: "#10b981" }}>Buys</div>
+            <div className="text-xl font-black font-mono leading-none mb-0.5" style={{ color: "#10b981" }}>
+              {summary.buyCount}
+            </div>
+            <div className="text-[10px] font-mono" style={{ color: "var(--text-muted)" }}>
+              {summary.buyValue > 0 ? fmtVal(summary.buyValue) : "—"}
+            </div>
+          </div>
+
+          {/* Sells */}
+          <div className="rounded-xl p-3.5" style={{ background: "rgba(239,68,68,0.05)", border: "1px solid rgba(239,68,68,0.12)" }}>
+            <div className="text-[9px] font-bold uppercase tracking-widest mb-1.5" style={{ color: "#ef4444" }}>Sells</div>
+            <div className="text-xl font-black font-mono leading-none mb-0.5" style={{ color: "#ef4444" }}>
+              {summary.sellCount}
+            </div>
+            <div className="text-[10px] font-mono" style={{ color: "var(--text-muted)" }}>
+              {summary.sellValue > 0 ? fmtVal(summary.sellValue) : "—"}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cluster buying alert */}
+      {summary?.clusterBuying && (
+        <div
+          className="flex items-center gap-2 rounded-lg px-3 py-2 mb-4 text-[11px]"
+          style={{ background: "rgba(16,185,129,0.07)", border: "1px solid rgba(16,185,129,0.16)" }}
+        >
+          <span className="font-black" style={{ color: "#10b981" }}>★</span>
+          <span className="font-bold" style={{ color: "#10b981" }}>Cluster Buying Detected</span>
+          <span style={{ color: "var(--text-secondary)" }}>
+            — {summary.recentBuyerCount} insiders purchased within the last 30 days
+          </span>
+        </div>
+      )}
+
+      {/* Trades table */}
+      <div className="overflow-x-auto">
+        <table className="w-full text-[11px]">
+          <thead>
+            <tr style={{ borderBottom: "1px solid var(--border)" }}>
+              {["Insider", "Role", "Action", "Shares", "Value", "Date"].map((h, i) => (
+                <th
+                  key={h}
+                  className={`pb-2 font-semibold ${i === 0 ? "text-left" : i <= 1 ? "text-left" : i <= 2 ? "text-center" : "text-right"}`}
+                  style={{ color: "var(--text-dim)" }}
+                >
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {trades.slice(0, 12).map((t, i) => {
+              const color = t.isBuy ? "#10b981" : "#ef4444";
+              return (
+                <tr key={i} style={{ borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
+                  <td className="py-2.5 font-semibold" style={{ color: "var(--text)" }}>
+                    {t.reportingName}
+                  </td>
+                  <td className="py-2.5" style={{ color: "var(--text-muted)" }}>
+                    {t.role}
+                  </td>
+                  <td className="py-2.5 text-center">
+                    <span
+                      className="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide"
+                      style={{ background: color + "12", color }}
+                    >
+                      {t.isBuy ? "Buy" : "Sell"}
+                    </span>
+                  </td>
+                  <td className="py-2.5 text-right font-mono" style={{ color: "var(--text-secondary)" }}>
+                    {t.securitiesTransacted.toLocaleString()}
+                  </td>
+                  <td className="py-2.5 text-right font-mono font-bold" style={{ color }}>
+                    {t.value > 0 ? fmtVal(t.value) : "—"}
+                  </td>
+                  <td className="py-2.5 text-right" style={{ color: "var(--text-dim)" }}>
+                    {t.transactionDate?.slice(0, 10) ?? "—"}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════ SEC Filings Panel ══════════════════ */
+
+interface SECFiling {
+  type: string;
+  label: string;
+  filingDate: string | null;
+  reportDate: string | null;
+  accessionNumber: string;
+  url: string;
+  viewerUrl: string;
+}
+
+const FILING_COLORS: Record<string, string> = {
+  "10-K": "#6366f1",
+  "10-K/A": "#6366f1",
+  "10-Q": "#3b82f6",
+  "10-Q/A": "#3b82f6",
+  "8-K": "#f59e0b",
+  "8-K/A": "#f59e0b",
+};
+
+function SECFilingsPanel({ ticker }: { ticker: string }) {
+  const [data, setData] = useState<{
+    filings: SECFiling[];
+    companyName?: string;
+    edgarUrl?: string;
+    error?: string;
+  } | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    setData(null);
+    fetch(`/api/sec-filings?ticker=${ticker}`)
+      .then((r) => r.json())
+      .then((d) => setData(d))
+      .catch(() => setData({ filings: [] }))
+      .finally(() => setLoading(false));
+  }, [ticker]);
+
+  if (loading) {
+    return (
+      <div className="card rounded-xl p-5">
+        <div className="section-label mb-4">SEC Filings</div>
+        <div className="space-y-2">
+          {[1, 2, 3, 4, 5].map((i) => <div key={i} className="shimmer rounded-lg h-10" />)}
+        </div>
+      </div>
+    );
+  }
+
+  if (!data || !data.filings?.length) return null;
+
+  const annuals = data.filings.filter((f) => f.type.startsWith("10-K"));
+  const quarterlies = data.filings.filter((f) => f.type.startsWith("10-Q"));
+  const eightK = data.filings.filter((f) => f.type.startsWith("8-K"));
+
+  return (
+    <div className="card rounded-xl p-5">
+      <div className="flex items-center justify-between mb-4">
+        <div className="section-label">SEC Filings</div>
+        <div className="flex items-center gap-2">
+          <span className="text-[9px] font-mono" style={{ color: "var(--text-dim)" }}>via EDGAR</span>
+          {data.edgarUrl && (
+            <a
+              href={data.edgarUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[9px] font-bold px-2 py-0.5 rounded transition-all hover:brightness-110"
+              style={{ background: "rgba(99,102,241,0.08)", color: "var(--accent)", border: "1px solid rgba(99,102,241,0.15)" }}
+            >
+              All Filings ↗
+            </a>
+          )}
+        </div>
+      </div>
+
+      {/* Legend */}
+      <div className="flex items-center gap-4 mb-4 text-[9px]">
+        {[["10-K", "#6366f1", "Annual"], ["10-Q", "#3b82f6", "Quarterly"], ["8-K", "#f59e0b", "Current"]].map(([type, color, desc]) => (
+          <div key={type} className="flex items-center gap-1.5">
+            <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: color }} />
+            <span style={{ color: "var(--text-dim)" }}>{type} <span className="opacity-60">({desc})</span></span>
+          </div>
+        ))}
+      </div>
+
+      {/* Quick stats row */}
+      {(annuals.length > 0 || quarterlies.length > 0) && (
+        <div className="flex items-center gap-3 mb-4 flex-wrap">
+          {annuals[0] && (
+            <div className="text-[10px]">
+              <span style={{ color: "var(--text-dim)" }}>Latest 10-K: </span>
+              <span className="font-mono font-semibold" style={{ color: "#6366f1" }}>{annuals[0].filingDate?.slice(0, 10)}</span>
+            </div>
+          )}
+          {quarterlies[0] && (
+            <div className="text-[10px]">
+              <span style={{ color: "var(--text-dim)" }}>Latest 10-Q: </span>
+              <span className="font-mono font-semibold" style={{ color: "#3b82f6" }}>{quarterlies[0].filingDate?.slice(0, 10)}</span>
+            </div>
+          )}
+          {eightK.length > 0 && (
+            <div className="text-[10px]">
+              <span style={{ color: "var(--text-dim)" }}>8-K filings (recent): </span>
+              <span className="font-mono font-semibold" style={{ color: "#f59e0b" }}>{eightK.length}</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Filing list */}
+      <div className="space-y-1.5">
+        {data.filings.slice(0, 12).map((f, i) => {
+          const color = FILING_COLORS[f.type] ?? "#71717a";
+          return (
+            <a
+              key={i}
+              href={f.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-between px-3 py-2.5 rounded-lg transition-all hover:bg-white/5 group"
+              style={{ background: "rgba(255,255,255,0.015)", border: "1px solid var(--border)" }}
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <span
+                  className="text-[9px] font-black px-1.5 py-0.5 rounded flex-shrink-0 text-center min-w-[3rem]"
+                  style={{ background: color + "12", color }}
+                >
+                  {f.type}
+                </span>
+                <div className="min-w-0">
+                  <div className="text-[11px] font-medium truncate" style={{ color: "var(--text-secondary)" }}>
+                    {f.label}
+                  </div>
+                  {f.reportDate && (
+                    <div className="text-[9px] font-mono" style={{ color: "var(--text-dim)" }}>
+                      Period: {f.reportDate.slice(0, 10)}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <span className="text-[10px] font-mono" style={{ color: "var(--text-muted)" }}>
+                  {f.filingDate?.slice(0, 10)}
+                </span>
+                <span className="text-[10px] opacity-0 group-hover:opacity-60 transition-opacity" style={{ color: "var(--text-muted)" }}>
+                  ↗
+                </span>
+              </div>
+            </a>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════ Stock News Section ══════════════════ */
+
+function StockNewsSection({
+  ticker,
+  onSelectArticle,
+}: {
+  ticker: string;
+  onSelectArticle: (article: NewsItem) => void;
+}) {
+  const [news, setNews] = useState<NewsItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    setNews([]);
+    fetch(`/api/stock-news?ticker=${ticker}`)
+      .then((r) => r.json())
+      .then((d) => setNews(d.news ?? []))
+      .catch(() => setNews([]))
+      .finally(() => setLoading(false));
+  }, [ticker]);
+
+  if (loading) {
+    return (
+      <div className="card rounded-xl p-5">
+        <div className="section-label mb-4">Latest News</div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          {[1, 2, 3, 4, 5, 6].map((i) => <div key={i} className="shimmer rounded-xl h-36" />)}
+        </div>
+      </div>
+    );
+  }
+
+  if (!news.length) return null;
+
+  return (
+    <div className="card rounded-xl p-5">
+      <div className="flex items-center justify-between mb-4">
+        <div className="section-label">Latest News — {ticker}</div>
+        <span className="text-[9px] font-mono" style={{ color: "var(--text-dim)" }}>Yahoo Finance</span>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        {news.slice(0, 6).map((article, i) => (
+          <NewsCard key={i} article={article} onClick={() => onSelectArticle(article)} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /* ══════════════════ Market Pulse Strip ══════════════════ */
 
 function MarketPulseStrip({
@@ -1532,6 +1924,9 @@ function LoadingSkeleton() {
           </div>
           <div className="shimmer rounded-xl h-48" />
           <div className="shimmer rounded-xl h-32" />
+          <div className="shimmer rounded-xl h-48" />
+          <div className="shimmer rounded-xl h-40" />
+          <div className="shimmer rounded-xl h-56" />
         </div>
         <div className="xl:col-span-4 space-y-5">
           <div className="shimmer rounded-xl h-56" />
@@ -2268,6 +2663,15 @@ export default function HomePage() {
                   analystTargets={stockDetails.analystTargets}
                 />
               )}
+
+              {/* ─── Stock-Specific News ─── */}
+              <StockNewsSection ticker={result.ticker} onSelectArticle={setSelectedNews} />
+
+              {/* ─── Insider Activity ─── */}
+              <InsiderTradingPanel ticker={result.ticker} />
+
+              {/* ─── SEC Filings ─── */}
+              <SECFilingsPanel ticker={result.ticker} />
 
               {/* Description */}
               {result.description && (
