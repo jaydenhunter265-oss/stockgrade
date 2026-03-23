@@ -1128,6 +1128,85 @@ interface SECFiling {
   viewerUrl: string;
 }
 
+interface FilingEvaluation {
+  score: "positive" | "neutral" | "warning" | "negative";
+  label: string;
+  signals: { positive: string[]; negative: string[]; neutral: string[] };
+}
+
+function evaluateFilings(filings: SECFiling[]): FilingEvaluation {
+  const pos: string[] = [];
+  const neg: string[] = [];
+  const neu: string[] = [];
+
+  const restatements = filings.filter((f) => f.type === "10-K/A" || f.type === "10-Q/A");
+  const annuals = filings.filter((f) => f.type === "10-K");
+  const quarterlies = filings.filter((f) => f.type === "10-Q");
+  const eightKs = filings.filter((f) => f.type.startsWith("8-K"));
+
+  // Restatement check
+  if (restatements.length === 0) {
+    pos.push("No amended filings or restatements detected");
+  } else if (restatements.length === 1) {
+    neg.push("1 amended filing — potential restatement");
+  } else {
+    neg.push(`${restatements.length} amended filings — restatements detected`);
+  }
+
+  // Annual report timeliness (<= 13 months old)
+  if (annuals[0]?.filingDate) {
+    const monthsAgo =
+      (Date.now() - new Date(annuals[0].filingDate).getTime()) / (1000 * 60 * 60 * 24 * 30);
+    if (monthsAgo <= 13) {
+      pos.push("Annual report filed within expected timeframe");
+    } else {
+      neg.push(`Annual report is ${Math.round(monthsAgo)} months old — possibly overdue`);
+    }
+  }
+
+  // Quarterly cadence: 3+ in last 13 months
+  const cutoff13 = new Date();
+  cutoff13.setMonth(cutoff13.getMonth() - 13);
+  const recentQs = quarterlies.filter((q) => q.filingDate && new Date(q.filingDate) >= cutoff13);
+  if (recentQs.length >= 3) {
+    pos.push("Consistent quarterly reporting cadence");
+  } else if (quarterlies.length > 0) {
+    neg.push("Quarterly reporting cadence appears inconsistent");
+  }
+
+  // 8-K density in last 90 days
+  const cutoff90 = new Date();
+  cutoff90.setDate(cutoff90.getDate() - 90);
+  const recent8K = eightKs.filter((f) => f.filingDate && new Date(f.filingDate) >= cutoff90);
+  if (recent8K.length >= 5) {
+    neg.push(`${recent8K.length} material disclosures in 90 days — elevated activity`);
+  } else if (recent8K.length >= 1) {
+    neu.push(
+      `${recent8K.length} recent 8-K${recent8K.length > 1 ? "s" : ""} — active material disclosure`
+    );
+  }
+
+  // Net scoring
+  let net = pos.length - neg.length * 1.5 - (restatements.length >= 2 ? 2 : 0);
+  let score: FilingEvaluation["score"];
+  let label: string;
+  if (net >= 2) {
+    score = "positive";
+    label = "Strong Compliance";
+  } else if (net >= 0) {
+    score = "neutral";
+    label = "Normal Filing Activity";
+  } else if (net >= -2) {
+    score = "warning";
+    label = "Filing Concerns";
+  } else {
+    score = "negative";
+    label = "Elevated Filing Risk";
+  }
+
+  return { score, label, signals: { positive: pos, negative: neg, neutral: neu } };
+}
+
 const FILING_COLORS: Record<string, string> = {
   "10-K": "#6366f1",
   "10-K/A": "#6366f1",
@@ -1172,6 +1251,14 @@ function SECFilingsPanel({ ticker }: { ticker: string }) {
   const annuals = data.filings.filter((f) => f.type.startsWith("10-K"));
   const quarterlies = data.filings.filter((f) => f.type.startsWith("10-Q"));
   const eightK = data.filings.filter((f) => f.type.startsWith("8-K"));
+  const evaluation = evaluateFilings(data.filings);
+
+  const evalColors = {
+    positive: { bg: "rgba(34,197,94,0.08)", border: "rgba(34,197,94,0.2)", text: "#22c55e", dot: "#22c55e" },
+    neutral:  { bg: "rgba(113,113,122,0.08)", border: "rgba(113,113,122,0.2)", text: "#a1a1aa", dot: "#a1a1aa" },
+    warning:  { bg: "rgba(245,158,11,0.08)", border: "rgba(245,158,11,0.2)", text: "#f59e0b", dot: "#f59e0b" },
+    negative: { bg: "rgba(239,68,68,0.08)", border: "rgba(239,68,68,0.2)", text: "#ef4444", dot: "#ef4444" },
+  }[evaluation.score];
 
   return (
     <div className="card rounded-xl p-5">
@@ -1190,6 +1277,42 @@ function SECFilingsPanel({ ticker }: { ticker: string }) {
               All Filings ↗
             </a>
           )}
+        </div>
+      </div>
+
+      {/* Filing Evaluation */}
+      <div
+        className="rounded-lg px-4 py-3 mb-4"
+        style={{ background: evalColors.bg, border: `1px solid ${evalColors.border}` }}
+      >
+        <div className="flex items-center gap-2 mb-2">
+          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: evalColors.dot }} />
+          <span className="text-[11px] font-bold" style={{ color: evalColors.text }}>
+            {evaluation.label}
+          </span>
+          <span className="text-[9px] ml-auto" style={{ color: "var(--text-dim)" }}>
+            Pattern analysis
+          </span>
+        </div>
+        <div className="space-y-1">
+          {evaluation.signals.positive.map((s, i) => (
+            <div key={i} className="flex items-start gap-1.5">
+              <span className="text-[10px] mt-px" style={{ color: "#22c55e" }}>✓</span>
+              <span className="text-[10px]" style={{ color: "var(--text-secondary)" }}>{s}</span>
+            </div>
+          ))}
+          {evaluation.signals.neutral.map((s, i) => (
+            <div key={i} className="flex items-start gap-1.5">
+              <span className="text-[10px] mt-px" style={{ color: "#f59e0b" }}>◆</span>
+              <span className="text-[10px]" style={{ color: "var(--text-secondary)" }}>{s}</span>
+            </div>
+          ))}
+          {evaluation.signals.negative.map((s, i) => (
+            <div key={i} className="flex items-start gap-1.5">
+              <span className="text-[10px] mt-px" style={{ color: "#ef4444" }}>✗</span>
+              <span className="text-[10px]" style={{ color: "var(--text-secondary)" }}>{s}</span>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -1270,6 +1393,200 @@ function SECFilingsPanel({ ticker }: { ticker: string }) {
           );
         })}
       </div>
+    </div>
+  );
+}
+
+/* ══════════════════ Institutional Holdings Panel ══════════════════ */
+
+interface InstHolder {
+  organization: string;
+  pctHeld: number | null;
+  position: number | null;
+  value: number | null;
+  pctChange: number | null;
+  reportDate: string | null;
+}
+
+interface InstSummary {
+  pctHeldByInsiders: number | null;
+  pctHeldByInstitutions: number | null;
+  pctHeldByFloatInstitutions: number | null;
+  institutionCount: number | null;
+}
+
+function InstitutionalHoldingsPanel({ ticker }: { ticker: string }) {
+  const [data, setData] = useState<{
+    summary: InstSummary | null;
+    holders: InstHolder[];
+  } | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    setData(null);
+    fetch(`/api/institutional-holdings?ticker=${ticker}`)
+      .then((r) => r.json())
+      .then((d) => setData(d))
+      .catch(() => setData({ summary: null, holders: [] }))
+      .finally(() => setLoading(false));
+  }, [ticker]);
+
+  if (loading) {
+    return (
+      <div className="card rounded-xl p-5">
+        <div className="section-label mb-4">Institutional Holdings</div>
+        <div className="space-y-2">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="shimmer rounded-lg h-10" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (!data || (!data.summary && !data.holders?.length)) return null;
+
+  const { summary, holders } = data;
+
+  // Net institutional sentiment: are top holders accumulating or distributing?
+  const changers = holders.filter((h) => h.pctChange !== null);
+  const netBuyers = changers.filter((h) => (h.pctChange ?? 0) > 0).length;
+  const netSellers = changers.filter((h) => (h.pctChange ?? 0) < 0).length;
+  const netSentiment =
+    changers.length === 0
+      ? "neutral"
+      : netBuyers > netSellers
+      ? "accumulating"
+      : netSellers > netBuyers
+      ? "distributing"
+      : "mixed";
+
+  const sentimentStyle = {
+    accumulating: { color: "#22c55e", bg: "rgba(34,197,94,0.08)", border: "rgba(34,197,94,0.2)", label: "Net Accumulating" },
+    distributing:  { color: "#ef4444", bg: "rgba(239,68,68,0.08)", border: "rgba(239,68,68,0.2)", label: "Net Distributing" },
+    mixed:         { color: "#f59e0b", bg: "rgba(245,158,11,0.08)", border: "rgba(245,158,11,0.2)", label: "Mixed Activity" },
+    neutral:       { color: "#a1a1aa", bg: "rgba(113,113,122,0.08)", border: "rgba(113,113,122,0.2)", label: "No Change Data" },
+  }[netSentiment];
+
+  const fmtPct = (v: number | null) => (v == null ? "—" : `${(v * 100).toFixed(2)}%`);
+  const fmtShares = (v: number | null) => {
+    if (v == null) return "—";
+    if (v >= 1e9) return `${(v / 1e9).toFixed(2)}B`;
+    if (v >= 1e6) return `${(v / 1e6).toFixed(1)}M`;
+    if (v >= 1e3) return `${(v / 1e3).toFixed(0)}K`;
+    return `${v}`;
+  };
+
+  return (
+    <div className="card rounded-xl p-5">
+      <div className="flex items-center justify-between mb-4">
+        <div className="section-label">Institutional Holdings</div>
+        <span className="text-[9px] font-mono" style={{ color: "var(--text-dim)" }}>
+          via Yahoo Finance
+        </span>
+      </div>
+
+      {/* Summary tiles */}
+      {summary && (
+        <div className="grid grid-cols-3 gap-3 mb-4">
+          {[
+            { label: "Institutional", value: fmtPct(summary.pctHeldByInstitutions), color: "#6366f1" },
+            { label: "Insider", value: fmtPct(summary.pctHeldByInsiders), color: "#3b82f6" },
+            { label: "Inst. of Float", value: fmtPct(summary.pctHeldByFloatInstitutions), color: "#8b5cf6" },
+          ].map((tile) => (
+            <div
+              key={tile.label}
+              className="rounded-lg p-3 text-center"
+              style={{ background: tile.color + "0d", border: `1px solid ${tile.color}20` }}
+            >
+              <div className="text-[15px] font-black" style={{ color: tile.color }}>
+                {tile.value}
+              </div>
+              <div className="text-[9px] font-medium mt-0.5" style={{ color: "var(--text-dim)" }}>
+                {tile.label}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Net sentiment badge */}
+      {changers.length > 0 && (
+        <div
+          className="rounded-lg px-3 py-2 mb-4 flex items-center gap-3"
+          style={{ background: sentimentStyle.bg, border: `1px solid ${sentimentStyle.border}` }}
+        >
+          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: sentimentStyle.color }} />
+          <span className="text-[11px] font-bold" style={{ color: sentimentStyle.color }}>
+            {sentimentStyle.label}
+          </span>
+          <span className="text-[10px] ml-auto" style={{ color: "var(--text-dim)" }}>
+            {netBuyers} adding · {netSellers} reducing
+          </span>
+        </div>
+      )}
+
+      {/* Top holders table */}
+      {holders.length > 0 && (
+        <div className="overflow-x-auto -mx-1">
+          <table className="w-full text-[10px]" style={{ borderCollapse: "collapse" }}>
+            <thead>
+              <tr style={{ color: "var(--text-dim)" }}>
+                <th className="text-left py-1.5 px-2 font-semibold">Institution</th>
+                <th className="text-right py-1.5 px-2 font-semibold">Shares</th>
+                <th className="text-right py-1.5 px-2 font-semibold">% Held</th>
+                <th className="text-right py-1.5 px-2 font-semibold">Change</th>
+              </tr>
+            </thead>
+            <tbody>
+              {holders.slice(0, 10).map((h, i) => {
+                const changeColor =
+                  h.pctChange == null
+                    ? "var(--text-dim)"
+                    : h.pctChange > 0
+                    ? "#22c55e"
+                    : h.pctChange < 0
+                    ? "#ef4444"
+                    : "var(--text-dim)";
+                const changeLabel =
+                  h.pctChange == null
+                    ? "—"
+                    : h.pctChange > 0
+                    ? `+${(h.pctChange * 100).toFixed(2)}%`
+                    : `${(h.pctChange * 100).toFixed(2)}%`;
+                return (
+                  <tr
+                    key={i}
+                    style={{
+                      borderTop: i === 0 ? "none" : "1px solid var(--border)",
+                      background: i % 2 === 0 ? "transparent" : "rgba(255,255,255,0.012)",
+                    }}
+                  >
+                    <td className="py-2 px-2 font-medium truncate max-w-[160px]" style={{ color: "var(--text-secondary)" }}>
+                      {h.organization}
+                    </td>
+                    <td className="py-2 px-2 text-right font-mono" style={{ color: "var(--text-muted)" }}>
+                      {fmtShares(h.position)}
+                    </td>
+                    <td className="py-2 px-2 text-right font-mono" style={{ color: "var(--text-secondary)" }}>
+                      {fmtPct(h.pctHeld)}
+                    </td>
+                    <td className="py-2 px-2 text-right font-mono font-bold" style={{ color: changeColor }}>
+                      {changeLabel}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {summary?.institutionCount != null && (
+        <div className="text-[9px] mt-3" style={{ color: "var(--text-dim)" }}>
+          {summary.institutionCount.toLocaleString()} institutions reporting
+        </div>
+      )}
     </div>
   );
 }
@@ -2669,6 +2986,9 @@ export default function HomePage() {
 
               {/* ─── Insider Activity ─── */}
               <InsiderTradingPanel ticker={result.ticker} />
+
+              {/* ─── Institutional Holdings ─── */}
+              <InstitutionalHoldingsPanel ticker={result.ticker} />
 
               {/* ─── SEC Filings ─── */}
               <SECFilingsPanel ticker={result.ticker} />
