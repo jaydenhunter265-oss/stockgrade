@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
         ticker: result.ticker,
         company_name: result.companyName,
         sector: result.sector,
-        score: result.finalScore,
+        score: result.combinedScore,
         rating: result.rating,
         metrics: result,
       }),

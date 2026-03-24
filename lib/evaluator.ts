@@ -765,13 +765,27 @@ export async function evaluateStock(ticker: string, _apiKey?: string): Promise<E
     };
   });
 
-  const totalScored = allMetrics.filter((m) => m.value !== "N/A");
-  const totalSum = totalScored.reduce((acc, m) => acc + m.score, 0);
-  const totalMax = totalScored.length;
-  const quantScore = totalMax > 0 ? Math.round(((totalSum + totalMax) / (2 * totalMax)) * 100) : 50;
+  // Compute the 3 category scores from their constituent metric groups
+  function bucketScore(catNames: string[]): number {
+    const metrics = categories
+      .filter((c) => catNames.includes(c.name))
+      .flatMap((c) => c.metrics)
+      .filter((m) => m.value !== "N/A");
+    const sum = metrics.reduce((acc, m) => acc + m.score, 0);
+    const max = metrics.length;
+    return max > 0 ? Math.round(((sum + max) / (2 * max)) * 100) : 50;
+  }
 
-  const finalScore = quantScore;
-  const { rating, color } = getRatingFromScore(finalScore);
+  // Quality: profitability, liquidity/solvency, cash flow, balance sheet
+  const qualityScore = bucketScore(["Profitability", "Liquidity & Solvency", "Cash Flow", "Balance Sheet"]);
+  // Growth: revenue, EPS, FCF, earnings growth metrics
+  const growthScore = bucketScore(["Growth"]);
+  // Value: valuation ratios (P/E, P/B, EV/EBITDA, FCF yield, etc.)
+  const valueScore = bucketScore(["Valuation"]);
+  // Combined: 40% quality, 30% growth, 30% value
+  const combinedScore = Math.round(0.4 * qualityScore + 0.3 * growthScore + 0.3 * valueScore);
+
+  const { rating, color } = getRatingFromScore(combinedScore);
 
   const topSignals = allMetrics
     .filter((m) => m.score === 1 && m.value !== "N/A")
@@ -816,9 +830,10 @@ export async function evaluateStock(ticker: string, _apiKey?: string): Promise<E
     dayLow: d.dayLow,
     open: d.open,
     previousClose: d.previousClose,
-    quantScore,
-    qualScore: 0,
-    finalScore,
+    qualityScore,
+    growthScore,
+    valueScore,
+    combinedScore,
     rating,
     ratingColor: color,
     categories,

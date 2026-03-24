@@ -246,9 +246,10 @@ export interface EvaluationResult {
   dayLow: number;
   open: number;
   previousClose: number;
-  quantScore: number;
-  qualScore: number;
-  finalScore: number;
+  qualityScore: number;
+  growthScore: number;
+  valueScore: number;
+  combinedScore: number;
   rating: "STRONG BUY" | "BUY" | "HOLD" | "UNDERWEIGHT" | "SELL";
   ratingColor: string;
   categories: CategoryScore[];

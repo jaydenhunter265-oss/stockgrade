@@ -25,7 +25,10 @@ export async function GET() {
     price: number;
     change: number;
     changePercent: number;
-    finalScore: number;
+    qualityScore: number;
+    growthScore: number;
+    valueScore: number;
+    combinedScore: number;
     rating: string;
     ratingColor: string;
     image: string;
@@ -52,7 +55,7 @@ export async function GET() {
           ticker: result.ticker,
           company_name: result.companyName,
           sector: result.sector,
-          score: result.finalScore,
+          score: result.combinedScore,
           rating: result.rating,
           metrics: result,
         }),
@@ -73,7 +76,10 @@ export async function GET() {
         price: r.price,
         change: r.change,
         changePercent: r.changePercent,
-        finalScore: r.finalScore,
+        qualityScore: r.qualityScore,
+        growthScore: r.growthScore,
+        valueScore: r.valueScore,
+        combinedScore: r.combinedScore,
         rating: r.rating,
         ratingColor: r.ratingColor,
         image: r.image,
@@ -81,7 +87,7 @@ export async function GET() {
     }
   }
 
-  const sorted = [...results].sort((a, b) => b.finalScore - a.finalScore);
+  const sorted = [...results].sort((a, b) => b.combinedScore - a.combinedScore);
 
   return NextResponse.json({
     topBuy: sorted.slice(0, 5),

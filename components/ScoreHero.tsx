@@ -1,7 +1,6 @@
 "use client";
 
 import React from 'react';
-import ScoreGauge from './score-gauge';
 import { formatNumber } from '@/lib/utils';
 
 interface ScoreHeroProps {
@@ -10,7 +9,10 @@ interface ScoreHeroProps {
   price: number;
   change: number;
   changePercent: number;
-  finalScore: number;
+  qualityScore: number;
+  growthScore: number;
+  valueScore: number;
+  combinedScore: number;
   rating: string;
   ratingColor: string;
   image?: string;
@@ -24,19 +26,35 @@ interface ScoreHeroProps {
   yearHigh?: number;
 }
 
+function ScoreBox({ label, score, color, sub }: { label: string; score: number; color: string; sub: string }) {
+  return (
+    <div
+      className="rounded-xl p-4 text-center flex-1"
+      style={{ background: color + "0d", border: `1px solid ${color}28` }}
+    >
+      <div className="text-[28px] font-black font-mono leading-none" style={{ color }}>{score}</div>
+      <div className="text-[8px] opacity-30 font-mono leading-none mt-0.5" style={{ color }}>/100</div>
+      <div className="text-[9px] font-bold uppercase tracking-wider mt-1.5" style={{ color }}>{label}</div>
+      <div className="text-[8px] mt-0.5 opacity-50" style={{ color: 'rgba(255,255,255,0.4)' }}>{sub}</div>
+    </div>
+  );
+}
+
 export default function ScoreHero({
   ticker,
   companyName,
   price,
   change,
   changePercent,
-  finalScore,
+  qualityScore,
+  growthScore,
+  valueScore,
+  combinedScore,
   rating,
   ratingColor,
   image,
   marketCap,
   pe,
-  eps,
   beta,
   dayLow,
   dayHigh,
@@ -48,13 +66,11 @@ export default function ScoreHero({
 
   return (
     <section className="score-hero shadow-lg-fintech rounded-3xl p-8 lg:p-12 overflow-hidden col-span-full layout-main-wide">
-      {/* Background gradient + grid pattern */}
       <div className="hero-grid absolute inset-0 opacity-20" />
-      
+
       <div className="relative z-10 flex flex-col lg:flex-row gap-8 lg:gap-12 items-start lg:items-center justify-between">
         {/* Company Header */}
         <div className="flex-1 min-w-0 space-y-4">
-          {/* Ticker + Logo */}
           <div className="flex items-center gap-4">
             {image && (
               <div className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-slate-800/50 shadow-md">
@@ -84,7 +100,7 @@ export default function ScoreHero({
 
           {/* Key Ranges */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-{dayLow != null && dayHigh != null && dayLow > 0 && dayHigh > 0 && (
+            {dayLow != null && dayHigh != null && dayLow > 0 && dayHigh > 0 && (
               <div className="metric-card">
                 <div className="metric-label">Day Range</div>
                 <div className="flex items-center justify-between mb-2">
@@ -96,7 +112,7 @@ export default function ScoreHero({
                 </div>
               </div>
             )}
-{yearLow != null && yearHigh != null && yearLow > 0 && yearHigh > 0 && (
+            {yearLow != null && yearHigh != null && yearLow > 0 && yearHigh > 0 && (
               <div className="metric-card">
                 <div className="metric-label">52 Week Range</div>
                 <div className="flex items-center justify-between mb-2">
@@ -111,21 +127,18 @@ export default function ScoreHero({
           </div>
         </div>
 
-        {/* Score Gauge + Quick Stats */}
-        <div className="flex flex-col items-center lg:items-end gap-6 lg:gap-8 flex-shrink-0">
-          {/* Main Score Gauge */}
-          <div className="relative">
-            <ScoreGauge 
-              score={finalScore} 
-              rating={rating} 
-              ratingColor={ratingColor}
-              size={200}
-            />
-            <div className="absolute -top-2 -right-2 w-20 h-20 bg-gradient-to-br from-green-fintech/10 to-yellow-fintech/5 rounded-2xl border-2 border-slate-800/50 shadow-glow" />
+        {/* 4 Score Boxes + Quick Stats */}
+        <div className="flex flex-col items-stretch lg:items-end gap-6 flex-shrink-0 w-full lg:w-auto lg:max-w-xs">
+          {/* Four Scores */}
+          <div className="grid grid-cols-2 gap-3">
+            <ScoreBox label="Quality" score={qualityScore} color="#10b981" sub="Prof · Debt · FCF" />
+            <ScoreBox label="Growth" score={growthScore} color="#3b82f6" sub="Rev · EPS · FCF" />
+            <ScoreBox label="Value" score={valueScore} color="#a78bfa" sub="P/E · EV · Yield" />
+            <ScoreBox label="Combined" score={combinedScore} color={ratingColor} sub="40Q · 30G · 30V" />
           </div>
 
           {/* Quick Metrics */}
-          <div className="grid grid-cols-3 gap-3 w-full max-w-sm text-center">
+          <div className="grid grid-cols-3 gap-3 w-full text-center">
             {marketCap && (
               <div className="metric-card p-4">
                 <div className="metric-label">Market Cap</div>
@@ -150,4 +163,3 @@ export default function ScoreHero({
     </section>
   );
 }
-

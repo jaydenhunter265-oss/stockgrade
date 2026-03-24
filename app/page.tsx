@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect } from "react";
 import type { EvaluationResult, CategoryScore, MetricScore } from "@/lib/types";
 import { formatNumber, cn, timeAgo } from "@/lib/utils";
-import ScoreGauge from "@/components/score-gauge";
 import PriceChart from "@/components/price-chart";
 
 /* ══════════════════ Types ══════════════════ */
@@ -15,7 +14,10 @@ interface TopStockItem {
   price: number;
   change: number;
   changePercent: number;
-  finalScore: number;
+  qualityScore: number;
+  growthScore: number;
+  valueScore: number;
+  combinedScore: number;
   rating: string;
   ratingColor: string;
   image: string;
@@ -728,6 +730,65 @@ function ScoreInsightsPanel({
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+/* ══════════════════ Four Score Panel ══════════════════ */
+
+function FourScorePanel({
+  qualityScore,
+  growthScore,
+  valueScore,
+  combinedScore,
+  ratingColor,
+  compact = false,
+}: {
+  qualityScore: number;
+  growthScore: number;
+  valueScore: number;
+  combinedScore: number;
+  ratingColor: string;
+  compact?: boolean;
+}) {
+  const scores = [
+    { label: "Quality", score: qualityScore, color: "#10b981", sub: "Prof · Debt · FCF" },
+    { label: "Growth", score: growthScore, color: "#3b82f6", sub: "Rev · EPS · FCF" },
+    { label: "Value", score: valueScore, color: "#a78bfa", sub: "P/E · EV · Yield" },
+    { label: "Combined", score: combinedScore, color: ratingColor, sub: "40Q · 30G · 30V" },
+  ];
+
+  if (compact) {
+    return (
+      <div className="grid grid-cols-4 gap-2">
+        {scores.map(({ label, score, color }) => (
+          <div
+            key={label}
+            className="rounded-lg py-2 px-1 text-center"
+            style={{ background: color + "0e", border: `1px solid ${color}28` }}
+          >
+            <div className="text-[18px] font-black font-mono leading-none" style={{ color }}>{score}</div>
+            <div className="text-[8px] font-bold uppercase tracking-wider mt-0.5 opacity-70" style={{ color }}>{label}</div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      {scores.map(({ label, score, color, sub }) => (
+        <div
+          key={label}
+          className="rounded-xl p-4 text-center"
+          style={{ background: color + "0d", border: `1px solid ${color}25` }}
+        >
+          <div className="text-[30px] font-black font-mono leading-none" style={{ color }}>{score}</div>
+          <div className="text-[8px] opacity-30 font-mono leading-none mt-0.5" style={{ color }}>/100</div>
+          <div className="text-[9px] font-bold uppercase tracking-wider mt-1.5" style={{ color }}>{label}</div>
+          <div className="text-[8px] mt-0.5 opacity-50" style={{ color: "var(--text-dim)" }}>{sub}</div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -2344,15 +2405,19 @@ function TopStockRow({
         </div>
       </div>
       <div
-        className="w-11 h-11 rounded-xl flex flex-col items-center justify-center font-black flex-shrink-0"
-        style={{
-          background: `${stock.ratingColor}12`,
-          border: `1px solid ${stock.ratingColor}25`,
-          color: stock.ratingColor,
-        }}
+        className="flex flex-col items-end gap-0.5 flex-shrink-0"
       >
-        <span className="text-[15px] leading-none">{stock.finalScore}</span>
-        <span className="text-[7px] font-bold opacity-40 leading-none mt-0.5">/100</span>
+        <div
+          className="w-11 h-11 rounded-xl flex flex-col items-center justify-center font-black"
+          style={{
+            background: `${stock.ratingColor}12`,
+            border: `1px solid ${stock.ratingColor}25`,
+            color: stock.ratingColor,
+          }}
+        >
+          <span className="text-[15px] leading-none">{stock.combinedScore}</span>
+          <span className="text-[7px] font-bold opacity-40 leading-none mt-0.5">comb</span>
+        </div>
       </div>
       <span className="text-[10px] opacity-0 group-hover:opacity-60 transition-opacity" style={{ color: "var(--text-muted)" }}>
         &#8250;
@@ -2889,9 +2954,15 @@ export default function HomePage() {
                     </div>
                   </div>
 
-                  {/* Score gauge — desktop right, mobile bottom */}
-                  <div className="flex-shrink-0 hidden sm:flex flex-col items-center">
-                    <ScoreGauge score={result.finalScore} rating={result.rating} ratingColor={result.ratingColor} size={156} />
+                  {/* Score panel — desktop right, mobile bottom */}
+                  <div className="flex-shrink-0 hidden sm:flex flex-col items-center gap-2 w-48">
+                    <FourScorePanel
+                      qualityScore={result.qualityScore}
+                      growthScore={result.growthScore}
+                      valueScore={result.valueScore}
+                      combinedScore={result.combinedScore}
+                      ratingColor={result.ratingColor}
+                    />
                     <div className="flex items-center gap-3 mt-1">
                       <span className="text-[10px] font-semibold" style={{ color: "var(--green)" }}>{totalBuy} buy</span>
                       <span className="text-[10px]" style={{ color: "var(--border-hover)" }}>·</span>
@@ -2925,12 +2996,19 @@ export default function HomePage() {
                   {result.yearHigh > 0 && <RangeBar low={result.yearLow} high={result.yearHigh} current={result.price} label="52 Week" />}
                 </div>
 
-                {/* Mobile score gauge */}
-                <div className="flex sm:hidden items-center justify-between pt-3" style={{ borderTop: "1px solid var(--border)" }}>
-                  <ScoreGauge score={result.finalScore} rating={result.rating} ratingColor={result.ratingColor} size={120} />
-                  <div className="text-right">
-                    <div className="text-[10px] mb-1" style={{ color: "var(--text-dim)" }}>{totalMetrics} metrics</div>
-                    <div className="flex items-center gap-2 justify-end">
+                {/* Mobile score panel */}
+                <div className="flex sm:hidden flex-col gap-2 pt-3" style={{ borderTop: "1px solid var(--border)" }}>
+                  <FourScorePanel
+                    qualityScore={result.qualityScore}
+                    growthScore={result.growthScore}
+                    valueScore={result.valueScore}
+                    combinedScore={result.combinedScore}
+                    ratingColor={result.ratingColor}
+                    compact
+                  />
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px]" style={{ color: "var(--text-dim)" }}>{totalMetrics} metrics</span>
+                    <div className="flex items-center gap-2">
                       <span className="text-[11px] font-semibold" style={{ color: "var(--green)" }}>{totalBuy} buy</span>
                       <span className="text-[11px] font-semibold" style={{ color: "var(--red)" }}>{totalSell} sell</span>
                     </div>
@@ -2973,7 +3051,7 @@ export default function HomePage() {
               {/* ─── AI Verdict Banner ─── */}
               <AIVerdictBanner
                 ticker={result.ticker}
-                score={result.finalScore}
+                score={result.combinedScore}
                 totalBuy={totalBuy}
                 totalSell={totalSell}
                 totalMetrics={totalMetrics}
@@ -3051,31 +3129,38 @@ export default function HomePage() {
                 </div>
               )}
 
-              {/* Verdict */}
-              <div className="rounded-xl p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4" style={{ background: result.ratingColor + "06", border: `1px solid ${result.ratingColor}18` }}>
-                <div className="w-14 h-14 rounded-xl flex items-center justify-center text-xl font-black flex-shrink-0" style={{ background: result.ratingColor + "12", color: result.ratingColor }}>
-                  {result.finalScore}
-                </div>
-                <div className="flex-1">
-                  <div className="text-sm font-black" style={{ color: result.ratingColor }}>
-                    Verdict: {result.rating}
+              {/* Verdict + Scores */}
+              <div className="rounded-xl p-5 space-y-4" style={{ background: result.ratingColor + "06", border: `1px solid ${result.ratingColor}18` }}>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                  <div className="flex-1">
+                    <div className="text-sm font-black" style={{ color: result.ratingColor }}>
+                      Verdict: {result.rating}
+                    </div>
+                    <div className="text-[12px] mt-0.5" style={{ color: "var(--text-secondary)" }}>
+                      Based on {totalMetrics} metrics across {result.categories.length} categories.
+                      {totalBuy > totalSell
+                        ? ` ${totalBuy} buy vs ${totalSell} sell signals — positive outlook.`
+                        : totalSell > totalBuy
+                          ? ` ${totalSell} sell vs ${totalBuy} buy signals — exercise caution.`
+                          : " Signals evenly split between buy and sell."}
+                    </div>
                   </div>
-                  <div className="text-[12px] mt-0.5" style={{ color: "var(--text-secondary)" }}>
-                    Based on {totalMetrics} metrics across {result.categories.length} categories.
-                    {totalBuy > totalSell
-                      ? ` ${totalBuy} buy vs ${totalSell} sell signals — positive outlook.`
-                      : totalSell > totalBuy
-                        ? ` ${totalSell} sell vs ${totalBuy} buy signals — exercise caution.`
-                        : " Signals evenly split between buy and sell."}
+                  <div className="text-[10px] font-mono flex-shrink-0" style={{ color: "var(--text-dim)" }}>
+                    {timeAgo(result.evaluatedAt)}
                   </div>
                 </div>
-                <div className="text-[10px] font-mono flex-shrink-0 text-right" style={{ color: "var(--text-dim)" }}>
-                  {timeAgo(result.evaluatedAt)}
-                </div>
+                <FourScorePanel
+                  qualityScore={result.qualityScore}
+                  growthScore={result.growthScore}
+                  valueScore={result.valueScore}
+                  combinedScore={result.combinedScore}
+                  ratingColor={result.ratingColor}
+                  compact
+                />
               </div>
 
               {/* Score Insights */}
-              <ScoreInsightsPanel categories={result.categories} score={result.finalScore} rating={result.rating} ratingColor={result.ratingColor} />
+              <ScoreInsightsPanel categories={result.categories} score={result.combinedScore} rating={result.rating} ratingColor={result.ratingColor} />
 
               {/* Signals */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
