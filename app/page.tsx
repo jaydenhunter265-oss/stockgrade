@@ -130,14 +130,30 @@ function SignalBadge({ signal }: { signal: "buy" | "neutral" | "sell" }) {
 
 function StatCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div className="card rounded-xl p-4">
-      <div className="text-[10px] font-semibold uppercase tracking-widest mb-1.5" style={{ color: "var(--text-dim)" }}>
+    <div
+      className="rounded-xl p-4 transition-all duration-150"
+      style={{
+        background: "var(--card)",
+        border: "1px solid var(--border)",
+      }}
+    >
+      <div
+        className="text-[9px] font-bold uppercase tracking-[0.1em] mb-2"
+        style={{ color: "var(--text-dim)" }}
+      >
         {label}
       </div>
-      <div className="text-base font-bold font-mono" style={{ color: "var(--text)" }}>
+      <div
+        className="text-[15px] font-bold font-mono leading-none"
+        style={{ color: "var(--text)", letterSpacing: "-0.02em" }}
+      >
         {value}
       </div>
-      {sub && <div className="text-[10px] mt-0.5" style={{ color: "var(--text-dim)" }}>{sub}</div>}
+      {sub && (
+        <div className="text-[9px] mt-1.5" style={{ color: "var(--text-dim)" }}>
+          {sub}
+        </div>
+      )}
     </div>
   );
 }
@@ -2269,7 +2285,7 @@ function RankingSkeleton() {
 function TopStockRow({
   stock,
   rank,
-  type,
+  type: _type,
   onEvaluate,
 }: {
   stock: TopStockItem;
@@ -2452,7 +2468,7 @@ export default function HomePage() {
     }
   }
 
-  async function handleEvaluate(e?: React.FormEvent) {
+  async function handleEvaluate(e?: React.SyntheticEvent) {
     e?.preventDefault();
     const t = ticker.trim().toUpperCase();
     if (!t) return;
@@ -2482,30 +2498,39 @@ export default function HomePage() {
       <header
         className="sticky top-0 z-40"
         style={{
-          background: "rgba(9, 9, 11, 0.92)",
+          background: "rgba(11, 15, 20, 0.94)",
           borderBottom: "1px solid var(--border)",
-          backdropFilter: "blur(16px)",
-          WebkitBackdropFilter: "blur(16px)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
         }}
       >
-        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2.5 cursor-pointer group" onClick={goHome}>
+        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center gap-4">
+          {/* Logo */}
+          <button
+            onClick={goHome}
+            className="flex items-center gap-2 flex-shrink-0 group"
+            style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}
+          >
             <div
-              className="w-7 h-7 rounded-md flex items-center justify-center text-[11px] font-black text-white"
-              style={{ background: "linear-gradient(135deg, var(--accent), var(--blue))" }}
+              className="w-6 h-6 rounded flex items-center justify-center text-[10px] font-black text-white flex-shrink-0"
+              style={{ background: "var(--accent)" }}
             >
               S
             </div>
-            <span className="text-[13px] font-bold tracking-tight group-hover:text-white transition-colors" style={{ color: "var(--text-secondary)" }}>
+            <span
+              className="text-[13px] font-semibold tracking-tight transition-colors duration-150 group-hover:text-white hidden sm:block"
+              style={{ color: "var(--text-muted)", letterSpacing: "-0.01em" }}
+            >
               StockGrade
             </span>
-          </div>
+          </button>
 
+          {/* Search bar — only when in results view */}
           {searched && (
-            <form onSubmit={handleEvaluate} className="hidden md:flex items-center gap-2.5 flex-1 max-w-lg mx-8">
+            <form onSubmit={handleEvaluate} className="hidden md:flex items-center gap-2 flex-1 max-w-md">
               <div className="relative flex-1">
-                <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "var(--text-dim)" }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
                   </svg>
                 </div>
@@ -2513,44 +2538,51 @@ export default function HomePage() {
                   type="text"
                   value={ticker}
                   onChange={(e) => setTicker(e.target.value.toUpperCase())}
-                  placeholder="Search ticker..."
-                  className="w-full pl-10 pr-9 py-2.5 rounded-xl text-sm font-mono placeholder:text-zinc-600 transition-all focus:outline-none"
-                  style={{ background: "var(--bg-elevated)", border: "1px solid var(--border-hover)", color: "var(--text)" }}
+                  placeholder="Search ticker…"
+                  className="w-full pl-9 pr-8 py-2 rounded-lg text-[13px] font-mono placeholder:text-zinc-600 transition-all focus:outline-none"
+                  style={{
+                    background: "var(--bg-elevated)",
+                    border: "1px solid var(--border)",
+                    color: "var(--text)",
+                    letterSpacing: "0.02em",
+                  }}
                 />
                 {ticker && (
                   <button
                     type="button"
                     onClick={() => setTicker("")}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-600 hover:text-white cursor-pointer text-xs transition-colors"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 flex items-center justify-center rounded cursor-pointer transition-colors hover:text-white text-[10px]"
+                    style={{ color: "var(--text-dim)" }}
                   >
-                    &#10005;
+                    ✕
                   </button>
                 )}
               </div>
               <button
                 type="submit"
                 disabled={loading || !ticker.trim()}
-                className="px-6 py-2.5 rounded-xl text-sm font-bold text-white cursor-pointer disabled:opacity-30 transition-all hover:brightness-110 whitespace-nowrap"
-                style={{ background: "linear-gradient(135deg, var(--accent), var(--blue))" }}
+                className="px-4 py-2 rounded-lg text-[12px] font-bold text-white cursor-pointer disabled:opacity-30 transition-all hover:brightness-110 whitespace-nowrap flex-shrink-0"
+                style={{ background: "var(--accent)" }}
               >
-                {loading ? <span className="pulse-glow">...</span> : "Analyze"}
+                {loading ? <span className="pulse-glow">…</span> : "Analyze"}
               </button>
             </form>
           )}
 
-          <div className="flex items-center gap-3">
+          <div className="ml-auto flex items-center gap-2">
             {searched && (
               <button
                 onClick={goHome}
-                className="text-sm font-semibold px-4 py-2 rounded-xl cursor-pointer transition-all hidden md:block hover:bg-white/5"
-                style={{ color: "var(--text-secondary)", border: "1px solid var(--border-hover)" }}
+                className="text-[12px] font-medium px-3 py-1.5 rounded-lg cursor-pointer transition-all hidden md:flex items-center gap-1.5 hover:bg-white/4"
+                style={{ color: "var(--text-muted)", border: "1px solid var(--border)" }}
               >
-                &#8592; Home
+                <span>←</span>
+                <span>Home</span>
               </button>
             )}
             <div
-              className="text-[9px] font-bold px-2.5 py-1 rounded-md tracking-widest hidden sm:block"
-              style={{ background: "rgba(99, 102, 241, 0.08)", color: "var(--accent)", border: "1px solid rgba(99, 102, 241, 0.15)" }}
+              className="text-[9px] font-bold px-2 py-1 rounded tracking-[0.1em] hidden sm:block"
+              style={{ background: "rgba(99,102,241,0.07)", color: "var(--accent)", border: "1px solid rgba(99,102,241,0.14)" }}
             >
               350+ METRICS
             </div>
@@ -2827,99 +2859,124 @@ export default function HomePage() {
 
       {/* ══════════════════ Results ══════════════════ */}
       {result && !loading && (
-        <div className="w-full max-w-screen-2xl mx-auto px-4 sm:px-8 pb-16 relative z-10 animate-fade-in">
-          <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+        <div className="w-full max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-20 relative z-10 animate-fade-in">
+          <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
             {/* ──── Main Column (8/12) ──── */}
-            <div className="xl:col-span-8 space-y-5">
-              {/* Company Header */}
-              <div className="card rounded-xl p-5 sm:p-6">
-                <div className="flex flex-col md:flex-row gap-6">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-3 mb-3">
-                      {result.image && (
-                        <img
-                          src={result.image}
-                          alt=""
-                          className="w-12 h-12 rounded-xl flex-shrink-0"
-                          style={{ border: "1px solid var(--border)" }}
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).style.display = "none";
-                          }}
-                        />
-                      )}
-                      <div>
-                        <div className="flex items-center gap-2.5">
-                          <h2 className="text-2xl font-black tracking-tight" style={{ color: "var(--text)" }}>
-                            {result.ticker}
-                          </h2>
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded" style={{ background: result.ratingColor + "15", color: result.ratingColor }}>
-                            {result.rating}
-                          </span>
-                        </div>
-                        <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
-                          {result.companyName}
+            <div className="xl:col-span-8 space-y-4">
+              {/* ── Company Header ── */}
+              <div
+                className="rounded-2xl p-5 sm:p-6"
+                style={{ background: "var(--card)", border: "1px solid var(--border)" }}
+              >
+                {/* Top row: logo + name + score gauge */}
+                <div className="flex items-start justify-between gap-4 mb-5">
+                  <div className="flex items-center gap-3 min-w-0">
+                    {result.image && (
+                      <img
+                        src={result.image}
+                        alt=""
+                        className="w-11 h-11 rounded-xl flex-shrink-0 object-contain"
+                        style={{ border: "1px solid var(--border)", background: "var(--bg-elevated)" }}
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                      />
+                    )}
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h2
+                          className="text-2xl font-black leading-none"
+                          style={{ color: "var(--text)", letterSpacing: "-0.03em" }}
+                        >
+                          {result.ticker}
+                        </h2>
+                        <span
+                          className="text-[9px] font-bold px-1.5 py-0.5 rounded tracking-wide uppercase"
+                          style={{ background: result.ratingColor + "14", color: result.ratingColor, border: `1px solid ${result.ratingColor}28` }}
+                        >
+                          {result.rating}
+                        </span>
+                      </div>
+                      <p className="text-[13px] font-medium mt-0.5 truncate" style={{ color: "var(--text-secondary)" }}>
+                        {result.companyName}
+                      </p>
+                      {result.sector && (
+                        <p className="text-[11px] mt-0.5" style={{ color: "var(--text-dim)" }}>
+                          {result.sector}{result.industry ? ` · ${result.industry}` : ""}
                         </p>
-                        {result.sector && (
-                          <p className="text-[11px] mt-0.5" style={{ color: "var(--text-muted)" }}>
-                            {result.sector} · {result.industry}
-                          </p>
-                        )}
-                      </div>
+                      )}
                     </div>
-
-                    <div className="flex flex-wrap items-baseline gap-3 mb-4">
-                      <span className="text-3xl sm:text-4xl font-black font-mono tracking-tighter" style={{ color: "var(--text)" }}>
-                        ${result.price.toFixed(2)}
-                      </span>
-                      <span
-                        className="text-sm font-semibold px-2.5 py-1 rounded-md"
-                        style={{
-                          color: result.change >= 0 ? "var(--green)" : "var(--red)",
-                          background: result.change >= 0 ? "rgba(16,185,129,0.08)" : "rgba(239,68,68,0.08)",
-                        }}
-                      >
-                        {result.change >= 0 ? "+" : ""}
-                        {result.change.toFixed(2)} ({result.changePercent.toFixed(2)}%)
-                      </span>
-                    </div>
-
-                    {result.dayHigh > 0 && <RangeBar low={result.dayLow} high={result.dayHigh} current={result.price} label="Today" />}
-                    {result.yearHigh > 0 && <RangeBar low={result.yearLow} high={result.yearHigh} current={result.price} label="52 Week" />}
                   </div>
 
-                  <div className="flex flex-col items-center flex-shrink-0">
-                    <ScoreGauge score={result.finalScore} rating={result.rating} ratingColor={result.ratingColor} size={170} />
-                    <div className="mt-2 text-center">
-                      <div className="text-[11px]" style={{ color: "var(--text-muted)" }}>
-                        {totalMetrics} metrics evaluated
-                      </div>
-                      <div className="flex items-center justify-center gap-3 mt-0.5">
-                        <span className="text-[11px] font-semibold" style={{ color: "#10b981" }}>
-                          {totalBuy} buy
-                        </span>
-                        <span className="text-[11px] font-semibold" style={{ color: "#ef4444" }}>
-                          {totalSell} sell
-                        </span>
-                      </div>
+                  {/* Score gauge — desktop right, mobile bottom */}
+                  <div className="flex-shrink-0 hidden sm:flex flex-col items-center">
+                    <ScoreGauge score={result.finalScore} rating={result.rating} ratingColor={result.ratingColor} size={156} />
+                    <div className="flex items-center gap-3 mt-1">
+                      <span className="text-[10px] font-semibold" style={{ color: "var(--green)" }}>{totalBuy} buy</span>
+                      <span className="text-[10px]" style={{ color: "var(--border-hover)" }}>·</span>
+                      <span className="text-[10px] font-semibold" style={{ color: "var(--red)" }}>{totalSell} sell</span>
                     </div>
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(window.location.href);
-                        const btn = document.getElementById("share-btn");
-                        if (btn) {
-                          btn.textContent = "Copied!";
-                          setTimeout(() => {
-                            btn.textContent = "Share Link";
-                          }, 2000);
-                        }
-                      }}
-                      id="share-btn"
-                      className="mt-3 text-[11px] font-semibold px-3 py-1.5 rounded-lg cursor-pointer transition-colors hover:bg-white/5"
-                      style={{ color: "var(--accent)", border: "1px solid rgba(99,102,241,0.2)", background: "rgba(99,102,241,0.04)" }}
-                    >
-                      Share Link
-                    </button>
                   </div>
+                </div>
+
+                {/* Price row */}
+                <div className="flex flex-wrap items-baseline gap-2.5 mb-4">
+                  <span
+                    className="font-mono font-black leading-none"
+                    style={{ fontSize: "clamp(26px,4vw,40px)", color: "var(--text)", letterSpacing: "-0.04em" }}
+                  >
+                    ${result.price.toFixed(2)}
+                  </span>
+                  <span
+                    className="text-[13px] font-semibold px-2 py-0.5 rounded-md font-mono"
+                    style={{
+                      color: result.change >= 0 ? "var(--green)" : "var(--red)",
+                      background: result.change >= 0 ? "rgba(34,197,94,0.08)" : "rgba(239,68,68,0.08)",
+                    }}
+                  >
+                    {result.change >= 0 ? "+" : ""}{result.change.toFixed(2)} ({result.changePercent.toFixed(2)}%)
+                  </span>
+                </div>
+
+                {/* Range bars */}
+                <div className="space-y-2 mb-4">
+                  {result.dayHigh > 0 && <RangeBar low={result.dayLow} high={result.dayHigh} current={result.price} label="Today" />}
+                  {result.yearHigh > 0 && <RangeBar low={result.yearLow} high={result.yearHigh} current={result.price} label="52 Week" />}
+                </div>
+
+                {/* Mobile score gauge */}
+                <div className="flex sm:hidden items-center justify-between pt-3" style={{ borderTop: "1px solid var(--border)" }}>
+                  <ScoreGauge score={result.finalScore} rating={result.rating} ratingColor={result.ratingColor} size={120} />
+                  <div className="text-right">
+                    <div className="text-[10px] mb-1" style={{ color: "var(--text-dim)" }}>{totalMetrics} metrics</div>
+                    <div className="flex items-center gap-2 justify-end">
+                      <span className="text-[11px] font-semibold" style={{ color: "var(--green)" }}>{totalBuy} buy</span>
+                      <span className="text-[11px] font-semibold" style={{ color: "var(--red)" }}>{totalSell} sell</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer: metrics count + share */}
+                <div
+                  className="flex items-center justify-between pt-3 mt-1"
+                  style={{ borderTop: "1px solid var(--border)" }}
+                >
+                  <span className="text-[10px]" style={{ color: "var(--text-dim)" }}>
+                    {totalMetrics} metrics evaluated
+                  </span>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(window.location.href);
+                      const btn = document.getElementById("share-btn");
+                      if (btn) {
+                        btn.textContent = "Copied!";
+                        setTimeout(() => { btn.textContent = "Share"; }, 2000);
+                      }
+                    }}
+                    id="share-btn"
+                    className="text-[11px] font-semibold px-2.5 py-1 rounded-lg cursor-pointer transition-all hover:brightness-110"
+                    style={{ color: "var(--accent)", border: "1px solid rgba(99,102,241,0.18)", background: "rgba(99,102,241,0.05)" }}
+                  >
+                    Share
+                  </button>
                 </div>
               </div>
 
@@ -3061,21 +3118,25 @@ export default function HomePage() {
               </div>
 
               {/* Scale */}
-              <div className="card rounded-xl p-5">
+              <div className="rounded-xl p-4" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
                 <h3 className="section-label mb-3">Scoring Scale</h3>
-                <div className="grid grid-cols-5 gap-1 sm:gap-2 text-center">
+                <div className="flex gap-1.5">
                   {[
-                    { range: "75-100", label: "STRONG BUY", color: "#22c55e" },
-                    { range: "55-74", label: "BUY", color: "#4ade80" },
-                    { range: "35-54", label: "HOLD", color: "#f59e0b" },
-                    { range: "15-34", label: "UNDER", color: "#f97316" },
-                    { range: "0-14", label: "SELL", color: "#ef4444" },
+                    { range: "75–100", label: "STRONG BUY", color: "#22c55e" },
+                    { range: "55–74",  label: "BUY",         color: "#4ade80" },
+                    { range: "35–54",  label: "HOLD",        color: "#f59e0b" },
+                    { range: "15–34",  label: "UNDER",       color: "#f97316" },
+                    { range: "0–14",   label: "SELL",        color: "#ef4444" },
                   ].map((r) => (
-                    <div key={r.label} className="py-2.5 sm:py-3 rounded-lg" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid var(--border)" }}>
-                      <div className="text-[8px] sm:text-[9px] font-black tracking-wide" style={{ color: r.color }}>
+                    <div
+                      key={r.label}
+                      className="flex-1 py-2.5 rounded-lg text-center"
+                      style={{ background: r.color + "0c", border: `1px solid ${r.color}22` }}
+                    >
+                      <div className="text-[8px] font-black tracking-wider leading-none" style={{ color: r.color }}>
                         {r.label}
                       </div>
-                      <div className="text-[8px] sm:text-[9px] mt-0.5 font-mono" style={{ color: "var(--text-dim)" }}>
+                      <div className="text-[8px] mt-1 font-mono opacity-50 leading-none" style={{ color: r.color }}>
                         {r.range}
                       </div>
                     </div>
@@ -3084,35 +3145,35 @@ export default function HomePage() {
               </div>
 
               {/* Disclaimer */}
-              <p className="text-[11px] leading-relaxed" style={{ color: "var(--text-dim)" }}>
-                This analysis is for informational and educational purposes only. It is not financial advice. Past performance does not guarantee future results. Always conduct your own due diligence and consult a licensed financial advisor before making investment decisions.
+              <p className="text-[11px] leading-relaxed px-1" style={{ color: "var(--text-dim)" }}>
+                For informational purposes only. Not financial advice. Always conduct your own due diligence before making investment decisions.
               </p>
             </div>
 
             {/* ──── Sidebar ──── */}
-            <div className="xl:col-span-4 space-y-5">
-              <div className="xl:sticky xl:top-20 space-y-5">
-                <div className="card rounded-xl p-4">
+            <div className="xl:col-span-4 space-y-4">
+              <div className="xl:sticky xl:top-[72px] space-y-4">
+                <div className="rounded-xl p-4" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
                   <h3 className="section-label mb-3">Category Scores</h3>
                   <CategorySummary categories={result.categories} />
                 </div>
 
-                <div className="card rounded-xl p-4">
-                  <h3 className="section-label mb-2.5">Quick Info</h3>
+                <div className="rounded-xl p-4" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+                  <h3 className="section-label mb-3">Quick Info</h3>
                   <div className="space-y-2.5">
                     {[
                       { label: "Exchange", value: result.exchange },
-                      { label: "Sector", value: result.sector },
+                      { label: "Sector",   value: result.sector },
                       { label: "Industry", value: result.industry },
-                      { label: "Country", value: result.country },
+                      { label: "Country",  value: result.country },
                     ]
                       .filter((item) => item.value)
                       .map((item) => (
-                        <div key={item.label} className="flex justify-between items-center">
-                          <span className="text-[11px]" style={{ color: "var(--text-muted)" }}>
+                        <div key={item.label} className="flex justify-between items-center gap-2">
+                          <span className="text-[11px] flex-shrink-0" style={{ color: "var(--text-dim)" }}>
                             {item.label}
                           </span>
-                          <span className="text-[11px] font-semibold text-right max-w-[55%] truncate" style={{ color: "var(--text-secondary)" }}>
+                          <span className="text-[11px] font-medium text-right truncate" style={{ color: "var(--text-secondary)" }}>
                             {item.value}
                           </span>
                         </div>
@@ -3128,26 +3189,23 @@ export default function HomePage() {
                   const total = topStocks.all!.length;
                   const pct = Math.round(((total - rank) / total) * 100);
                   return (
-                    <div className="card rounded-xl p-4">
+                    <div className="rounded-xl p-4" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
                       <h3 className="section-label mb-3">Universe Rank</h3>
                       <div className="flex items-center gap-3 mb-3">
-                        <div className="text-2xl font-black font-mono" style={{ color: "var(--accent)" }}>
+                        <div className="text-2xl font-black font-mono" style={{ color: "var(--accent)", letterSpacing: "-0.03em" }}>
                           #{rank}
                         </div>
                         <div>
-                          <div className="text-[11px] font-semibold" style={{ color: "var(--text-secondary)" }}>
+                          <div className="text-[12px] font-semibold" style={{ color: "var(--text-secondary)" }}>
                             of {total} stocks
                           </div>
-                          <div className="text-[10px]" style={{ color: "var(--text-dim)" }}>
+                          <div className="text-[10px] mt-0.5" style={{ color: "var(--text-dim)" }}>
                             Better than {pct}%
                           </div>
                         </div>
                       </div>
-                      <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "var(--border)" }}>
-                        <div
-                          className="h-full rounded-full"
-                          style={{ width: `${pct}%`, background: "linear-gradient(90deg, var(--accent), var(--blue))" }}
-                        />
+                      <div className="h-1 rounded-full overflow-hidden" style={{ background: "var(--border)" }}>
+                        <div className="h-full rounded-full metric-bar" style={{ width: `${pct}%`, background: "var(--accent)" }} />
                       </div>
                     </div>
                   );
@@ -3155,50 +3213,41 @@ export default function HomePage() {
 
                 {/* Analyst Consensus in sidebar */}
                 {stockDetails?.analystTargets?.recommendationKey && (
-                  <div className="card rounded-xl p-4">
-                    <h3 className="section-label mb-2.5">Analyst Consensus</h3>
-                    <div className="text-center py-2">
-                      <div
-                        className="text-lg font-black uppercase"
-                        style={{
-                          color:
-                            stockDetails.analystTargets.recommendationKey === "buy" || stockDetails.analystTargets.recommendationKey === "strong_buy"
-                              ? "#10b981"
-                              : stockDetails.analystTargets.recommendationKey === "hold"
-                                ? "#f59e0b"
-                                : "#ef4444",
-                        }}
-                      >
-                        {stockDetails.analystTargets.recommendationKey.replace(/_/g, " ")}
-                      </div>
-                      {stockDetails.analystTargets.numberOfAnalysts && (
-                        <div className="text-[10px] mt-1" style={{ color: "var(--text-dim)" }}>
-                          Based on {stockDetails.analystTargets.numberOfAnalysts} analysts
-                        </div>
-                      )}
-                      {stockDetails.analystTargets.recommendationMean && (
-                        <div className="mt-2">
-                          <div className="flex justify-between text-[9px] font-mono mb-1" style={{ color: "var(--text-dim)" }}>
-                            <span>Strong Buy</span>
-                            <span>Sell</span>
+                  <div className="rounded-xl p-4" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+                    <h3 className="section-label mb-3">Analyst Consensus</h3>
+                    {(() => {
+                      const rk = stockDetails.analystTargets!.recommendationKey!;
+                      const recColor = rk === "buy" || rk === "strong_buy" ? "#22c55e" : rk === "hold" ? "#f59e0b" : "#ef4444";
+                      return (
+                        <div>
+                          <div className="flex items-baseline gap-2 mb-1">
+                            <span className="text-[18px] font-black capitalize" style={{ color: recColor, letterSpacing: "-0.02em" }}>
+                              {rk.replace(/_/g, " ")}
+                            </span>
+                            {stockDetails.analystTargets!.numberOfAnalysts && (
+                              <span className="text-[10px]" style={{ color: "var(--text-dim)" }}>
+                                {stockDetails.analystTargets!.numberOfAnalysts} analysts
+                              </span>
+                            )}
                           </div>
-                          <div className="h-1.5 rounded-full" style={{ background: "var(--border)" }}>
-                            <div
-                              className="h-full rounded-full"
-                              style={{
-                                width: `${((stockDetails.analystTargets.recommendationMean - 1) / 4) * 100}%`,
-                                background: "linear-gradient(90deg, #10b981, #f59e0b, #ef4444)",
-                              }}
-                            />
-                          </div>
+                          {stockDetails.analystTargets!.recommendationMean && (
+                            <div className="mt-2">
+                              <div className="flex justify-between text-[9px] font-mono mb-1.5" style={{ color: "var(--text-dim)" }}>
+                                <span>Strong Buy</span><span>Sell</span>
+                              </div>
+                              <div className="h-1 rounded-full" style={{ background: "var(--border)" }}>
+                                <div className="h-full rounded-full" style={{ width: `${((stockDetails.analystTargets!.recommendationMean - 1) / 4) * 100}%`, background: "linear-gradient(90deg, #22c55e, #f59e0b, #ef4444)" }} />
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
+                      );
+                    })()}
                   </div>
                 )}
 
-                <div className="card rounded-xl p-4">
-                  <h3 className="section-label mb-2.5">Quick Evaluate</h3>
+                <div className="rounded-xl p-4" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+                  <h3 className="section-label mb-3">Quick Evaluate</h3>
                   <div className="flex flex-wrap gap-1.5">
                     {popular
                       .filter((t) => t !== result.ticker)
@@ -3206,12 +3255,9 @@ export default function HomePage() {
                       .map((t) => (
                         <button
                           key={t}
-                          onClick={() => {
-                            setTicker(t);
-                            handleEvaluateDirect(t);
-                          }}
-                          className="px-2.5 py-1.5 rounded-md text-[11px] font-mono font-semibold cursor-pointer ticker-btn"
-                          style={{ background: "var(--card)", border: "1px solid var(--border)", color: "var(--text-muted)" }}
+                          onClick={() => { setTicker(t); handleEvaluateDirect(t); }}
+                          className="px-2.5 py-1.5 rounded-lg text-[11px] font-mono font-semibold cursor-pointer ticker-btn"
+                          style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)", color: "var(--text-muted)" }}
                         >
                           {t}
                         </button>
@@ -3229,18 +3275,18 @@ export default function HomePage() {
 
       {/* ═══════ Footer ═══════ */}
       <footer className="relative z-10 mt-auto" style={{ borderTop: "1px solid var(--border)" }}>
-        <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 py-6">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-3">
+        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-4">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <div className="w-5 h-5 rounded flex items-center justify-center text-[9px] font-black text-white" style={{ background: "linear-gradient(135deg, var(--accent), var(--blue))" }}>
+              <div className="w-4 h-4 rounded flex items-center justify-center text-[8px] font-black text-white flex-shrink-0" style={{ background: "var(--accent)" }}>
                 S
               </div>
               <span className="text-[11px] font-medium" style={{ color: "var(--text-dim)" }}>
                 StockGrade &copy; {new Date().getFullYear()}
               </span>
             </div>
-            <p className="text-[10px] text-center sm:text-right" style={{ color: "var(--text-dim)", opacity: 0.5 }}>
-              Data provided by Yahoo Finance. Scores are algorithmically generated. Not financial advice.
+            <p className="text-[10px]" style={{ color: "var(--text-dim)", opacity: 0.45 }}>
+              Data via Yahoo Finance · Algorithmic scores · Not financial advice
             </p>
           </div>
         </div>
