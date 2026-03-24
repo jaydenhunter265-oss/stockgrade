@@ -96,7 +96,7 @@ export default function PriceChart({ ticker, currentPrice, change, changePercent
       layout: {
         background: { type: ColorType.Solid, color: "transparent" },
         textColor: "rgba(255,255,255,0.3)",
-        fontFamily: "'SF Mono', 'Fira Code', monospace",
+        fontFamily: "var(--font-mono), ui-monospace, Menlo, Consolas, monospace",
       },
       grid: {
         vertLines: { color: "rgba(255,255,255,0.04)" },
@@ -278,7 +278,7 @@ export default function PriceChart({ ticker, currentPrice, change, changePercent
         <div>
           <div className="section-label mb-1">Price Chart</div>
           <div className="flex items-baseline gap-2 flex-wrap">
-            <span className="text-xl font-black font-mono" style={{ color: "var(--text)" }}>
+            <span className="text-xl font-bold font-mono" style={{ color: "var(--text)" }}>
               ${displayPrice.toFixed(2)}
             </span>
             <span className="text-xs font-mono font-semibold" style={{ color: displayPos ? "#10b981" : "#ef4444" }}>

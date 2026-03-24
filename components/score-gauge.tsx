@@ -55,7 +55,7 @@ export default function ScoreGauge({ score, rating, ratingColor, size = 200 }: S
           textAnchor="middle"
           fill="#fafafa"
           fontSize="24"
-          fontWeight="800"
+          fontWeight="700"
           fontFamily="var(--font-inter), system-ui"
           letterSpacing="-1"
         >
@@ -78,7 +78,7 @@ export default function ScoreGauge({ score, rating, ratingColor, size = 200 }: S
           textAnchor="middle"
           fill={ratingColor}
           fontSize="7.5"
-          fontWeight="800"
+          fontWeight="700"
           fontFamily="var(--font-inter), system-ui"
           letterSpacing="0.5"
         >
