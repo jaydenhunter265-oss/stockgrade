@@ -131,26 +131,26 @@ function SignalBadge({ signal }: { signal: "buy" | "neutral" | "sell" }) {
 function StatCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
     <div
-      className="rounded-xl p-4 transition-all duration-150"
+      className="rounded-lg p-3.5 transition-all duration-150"
       style={{
         background: "var(--card)",
         border: "1px solid var(--border)",
       }}
     >
       <div
-        className="text-[9px] font-bold uppercase tracking-[0.1em] mb-2"
-        style={{ color: "var(--text-dim)" }}
+        className="text-[9px] font-semibold uppercase tracking-[0.1em] mb-1.5"
+        style={{ color: "var(--text-muted)" }}
       >
         {label}
       </div>
       <div
-        className="text-[15px] font-bold font-mono leading-none"
-        style={{ color: "var(--text)", letterSpacing: "-0.02em" }}
+        className="text-[14px] font-semibold font-mono leading-none"
+        style={{ color: "var(--text)", letterSpacing: "-0.01em" }}
       >
         {value}
       </div>
       {sub && (
-        <div className="text-[9px] mt-1.5" style={{ color: "var(--text-dim)" }}>
+        <div className="text-[9px] mt-1" style={{ color: "var(--text-dim)" }}>
           {sub}
         </div>
       )}
@@ -282,7 +282,7 @@ function AnalystTargetsSection({ targets, currentPrice }: { targets: AnalystTarg
         <div className="absolute" style={{ left: `${pctOf(currentPrice)}%`, top: "-10px", transform: "translateX(-50%)" }}>
           <div
             className="w-4 h-4 rounded-full border-2 mx-auto"
-            style={{ background: "var(--accent)", borderColor: "var(--bg)", boxShadow: `0 0 8px rgba(99,102,241,0.5)` }}
+            style={{ background: "var(--accent)", borderColor: "var(--bg)", boxShadow: `0 0 8px rgba(0,191,165,0.5)` }}
           />
           <div className="text-center mt-1">
             <div className="text-[9px] font-bold" style={{ color: "var(--accent)" }}>CURRENT</div>
@@ -700,7 +700,7 @@ function ScoreInsightsPanel({
 
   if (totalBuy > 0 || totalSell > 0) {
     if (totalBuy >= totalSell * 2) {
-      insights.push({ icon: "→", color: "#6366f1", text: `Signal distribution is bullish: ${totalBuy} buy vs ${totalSell} sell across all metrics.` });
+      insights.push({ icon: "→", color: "var(--accent)", text: `Signal distribution is bullish: ${totalBuy} buy vs ${totalSell} sell across all metrics.` });
     } else if (totalSell > totalBuy) {
       insights.push({ icon: "→", color: "#f97316", text: `Signal distribution leans bearish: ${totalSell} sell vs ${totalBuy} buy across all metrics.` });
     }
@@ -835,7 +835,7 @@ function PriceOutlookCard({
           >
             <div
               className="w-4 h-4 rounded-full border-2"
-              style={{ background: "var(--accent)", borderColor: "var(--bg)", boxShadow: "0 0 10px rgba(99,102,241,0.55)" }}
+              style={{ background: "var(--accent)", borderColor: "var(--bg)", boxShadow: "0 0 10px rgba(0,191,165,0.55)" }}
             />
           </div>
         </div>
@@ -1224,12 +1224,12 @@ function evaluateFilings(filings: SECFiling[]): FilingEvaluation {
 }
 
 const FILING_COLORS: Record<string, string> = {
-  "10-K": "#6366f1",
-  "10-K/A": "#6366f1",
-  "10-Q": "#3b82f6",
-  "10-Q/A": "#3b82f6",
-  "8-K": "#f59e0b",
-  "8-K/A": "#f59e0b",
+  "10-K": "#00BFA5",
+  "10-K/A": "#00BFA5",
+  "10-Q": "#388BFD",
+  "10-Q/A": "#388BFD",
+  "8-K": "#FFB800",
+  "8-K/A": "#FFB800",
 };
 
 function SECFilingsPanel({ ticker }: { ticker: string }) {
@@ -1288,7 +1288,7 @@ function SECFilingsPanel({ ticker }: { ticker: string }) {
               target="_blank"
               rel="noopener noreferrer"
               className="text-[9px] font-bold px-2 py-0.5 rounded transition-all hover:brightness-110"
-              style={{ background: "rgba(99,102,241,0.08)", color: "var(--accent)", border: "1px solid rgba(99,102,241,0.15)" }}
+              style={{ background: "rgba(0,191,165,0.08)", color: "var(--accent)", border: "1px solid rgba(0,191,165,0.15)" }}
             >
               All Filings ↗
             </a>
@@ -1334,7 +1334,7 @@ function SECFilingsPanel({ ticker }: { ticker: string }) {
 
       {/* Legend */}
       <div className="flex items-center gap-4 mb-4 text-[9px]">
-        {[["10-K", "#6366f1", "Annual"], ["10-Q", "#3b82f6", "Quarterly"], ["8-K", "#f59e0b", "Current"]].map(([type, color, desc]) => (
+        {[["10-K", "#00BFA5", "Annual"], ["10-Q", "#388BFD", "Quarterly"], ["8-K", "#FFB800", "Current"]].map(([type, color, desc]) => (
           <div key={type} className="flex items-center gap-1.5">
             <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: color }} />
             <span style={{ color: "var(--text-dim)" }}>{type} <span className="opacity-60">({desc})</span></span>
@@ -1348,7 +1348,7 @@ function SECFilingsPanel({ ticker }: { ticker: string }) {
           {annuals[0] && (
             <div className="text-[10px]">
               <span style={{ color: "var(--text-dim)" }}>Latest 10-K: </span>
-              <span className="font-mono font-semibold" style={{ color: "#6366f1" }}>{annuals[0].filingDate?.slice(0, 10)}</span>
+              <span className="font-mono font-semibold" style={{ color: "var(--accent)" }}>{annuals[0].filingDate?.slice(0, 10)}</span>
             </div>
           )}
           {quarterlies[0] && (
@@ -1507,7 +1507,7 @@ function InstitutionalHoldingsPanel({ ticker }: { ticker: string }) {
       {summary && (
         <div className="grid grid-cols-3 gap-3 mb-4">
           {[
-            { label: "Institutional", value: fmtPct(summary.pctHeldByInstitutions), color: "#6366f1" },
+            { label: "Institutional", value: fmtPct(summary.pctHeldByInstitutions), color: "var(--accent)" },
             { label: "Insider", value: fmtPct(summary.pctHeldByInsiders), color: "#3b82f6" },
             { label: "Inst. of Float", value: fmtPct(summary.pctHeldByFloatInstitutions), color: "#8b5cf6" },
           ].map((tile) => (
@@ -2085,11 +2085,11 @@ function PriceOutlook({
             {ownership!.heldByInstitutions !== null && (
               <div className="rounded-lg p-3" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid var(--border)" }}>
                 <div className="text-[9px] font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--text-dim)" }}>Institutional</div>
-                <div className="text-base font-black font-mono" style={{ color: ownership!.heldByInstitutions > 0.5 ? "#6366f1" : "var(--text)" }}>
+                <div className="text-base font-black font-mono" style={{ color: ownership!.heldByInstitutions > 0.5 ? "var(--accent)" : "var(--text)" }}>
                   {(ownership!.heldByInstitutions * 100).toFixed(1)}%
                 </div>
                 <div className="h-1 rounded-full mt-1.5" style={{ background: "var(--border)" }}>
-                  <div className="h-full rounded-full" style={{ width: `${Math.min(100, ownership!.heldByInstitutions * 100)}%`, background: "#6366f1" }} />
+                  <div className="h-full rounded-full" style={{ width: `${Math.min(100, ownership!.heldByInstitutions * 100)}%`, background: "var(--accent)" }} />
                 </div>
               </div>
             )}
@@ -2498,7 +2498,7 @@ export default function HomePage() {
       <header
         className="sticky top-0 z-40"
         style={{
-          background: "rgba(11, 15, 20, 0.94)",
+          background: "rgba(0, 0, 0, 0.95)",
           borderBottom: "1px solid var(--border)",
           backdropFilter: "blur(20px)",
           WebkitBackdropFilter: "blur(20px)",
@@ -2512,8 +2512,8 @@ export default function HomePage() {
             style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}
           >
             <div
-              className="w-6 h-6 rounded flex items-center justify-center text-[10px] font-black text-white flex-shrink-0"
-              style={{ background: "var(--accent)" }}
+              className="w-6 h-6 rounded flex items-center justify-center text-[10px] font-black flex-shrink-0"
+              style={{ background: "var(--accent)", color: "#000" }}
             >
               S
             </div>
@@ -2561,8 +2561,7 @@ export default function HomePage() {
               <button
                 type="submit"
                 disabled={loading || !ticker.trim()}
-                className="px-4 py-2 rounded-lg text-[12px] font-bold text-white cursor-pointer disabled:opacity-30 transition-all hover:brightness-110 whitespace-nowrap flex-shrink-0"
-                style={{ background: "var(--accent)" }}
+                className="btn-primary px-4 py-2 text-[12px] whitespace-nowrap flex-shrink-0"
               >
                 {loading ? <span className="pulse-glow">…</span> : "Analyze"}
               </button>
@@ -2573,16 +2572,15 @@ export default function HomePage() {
             {searched && (
               <button
                 onClick={goHome}
-                className="text-[12px] font-medium px-3 py-1.5 rounded-lg cursor-pointer transition-all hidden md:flex items-center gap-1.5 hover:bg-white/4"
-                style={{ color: "var(--text-muted)", border: "1px solid var(--border)" }}
+                className="btn-ghost text-[12px] font-medium px-3 py-1.5 hidden md:flex items-center gap-1.5"
               >
                 <span>←</span>
                 <span>Home</span>
               </button>
             )}
             <div
-              className="text-[9px] font-bold px-2 py-1 rounded tracking-[0.1em] hidden sm:block"
-              style={{ background: "rgba(99,102,241,0.07)", color: "var(--accent)", border: "1px solid rgba(99,102,241,0.14)" }}
+              className="text-[9px] font-semibold px-2 py-1 rounded tracking-[0.1em] hidden sm:block"
+              style={{ background: "var(--accent-dim)", color: "var(--accent)", border: "1px solid var(--accent-border)" }}
             >
               350+ METRICS
             </div>
@@ -2596,34 +2594,27 @@ export default function HomePage() {
           {/* Hero + Search */}
           <div className="relative grid-pattern">
             <div
-              className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] pointer-events-none"
-              style={{ background: "radial-gradient(ellipse at center, rgba(99,102,241,0.06) 0%, transparent 60%)" }}
-            />
-            <div
-              className="absolute top-40 left-1/4 w-[300px] h-[300px] pointer-events-none"
-              style={{ background: "radial-gradient(circle, rgba(59,130,246,0.04) 0%, transparent 70%)" }}
+              className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] pointer-events-none"
+              style={{ background: "radial-gradient(ellipse at center, rgba(0,191,165,0.05) 0%, transparent 65%)" }}
             />
 
-            <div className="relative z-10 flex flex-col items-center px-4 sm:px-6 pt-16 sm:pt-20 pb-12 sm:pb-16">
+            <div className="relative z-10 flex flex-col items-center px-4 sm:px-6 pt-6 sm:pt-8 pb-4 sm:pb-5">
               <div
-                className="text-[10px] font-bold uppercase tracking-[0.15em] px-3.5 py-1.5 rounded-full mb-8 animate-fade-in"
-                style={{ background: "rgba(99,102,241,0.06)", color: "var(--accent)", border: "1px solid rgba(99,102,241,0.12)" }}
+                className="text-[10px] font-semibold uppercase tracking-[0.15em] px-3 py-1 rounded mb-4 animate-fade-in"
+                style={{ background: "var(--accent-dim)", color: "var(--accent)", border: "1px solid var(--accent-border)" }}
               >
-                Institutional-Grade Analysis
+                Institutional-Grade Analysis · 350+ Metrics
               </div>
 
               <h1
-                className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-tight text-center mb-5 animate-fade-in stagger-1"
-                style={{ color: "var(--text)", lineHeight: 1.05 }}
+                className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-center mb-3 animate-fade-in stagger-1"
+                style={{ color: "var(--text)", lineHeight: 1.08 }}
               >
-                Evaluate Any
-                <br />
-                <span className="gradient-text">Stock</span>
+                Evaluate Any <span className="gradient-text">Stock</span>
               </h1>
 
-              <p className="text-sm sm:text-base md:text-lg text-center max-w-md mb-8 sm:mb-10 animate-fade-in stagger-2" style={{ color: "var(--text-muted)", lineHeight: 1.6 }}>
-                350+ quantitative metrics. Instant Buy/Sell ratings.
-                <br className="hidden sm:block" /> The analysis pros use, available to everyone.
+              <p className="text-sm text-center max-w-sm mb-5 animate-fade-in stagger-2" style={{ color: "var(--text-muted)" }}>
+                Instant Buy/Sell ratings powered by quantitative analysis.
               </p>
 
               {/* Search Box */}
@@ -2661,8 +2652,7 @@ export default function HomePage() {
                     <button
                       type="submit"
                       disabled={loading || !ticker.trim()}
-                      className="m-2 px-6 sm:px-8 py-2.5 sm:py-3 rounded-xl font-semibold text-white text-sm transition-all disabled:opacity-30 cursor-pointer hover:brightness-110"
-                      style={{ background: "linear-gradient(135deg, var(--accent), var(--blue))" }}
+                      className="btn-primary m-1.5 px-6 sm:px-8 py-2.5 sm:py-3 text-sm rounded"
                     >
                       {loading ? <span className="pulse-glow">Analyzing...</span> : "Evaluate"}
                     </button>
@@ -2672,20 +2662,15 @@ export default function HomePage() {
 
               {/* Recent Searches */}
               {recentSearches.length > 0 && (
-                <div className="mt-5 flex items-center gap-2 animate-fade-in stagger-3 flex-wrap justify-center">
-                  <span className="text-[10px] font-medium uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
-                    Recent
-                  </span>
+                <div className="mt-3 flex items-center gap-2 animate-fade-in stagger-3 flex-wrap justify-center">
+                  <span className="text-[10px] font-medium uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>Recent</span>
                   <div className="w-px h-3" style={{ background: "var(--border)" }} />
                   {recentSearches.slice(0, 5).map((t) => (
                     <button
                       key={t}
-                      onClick={() => {
-                        setTicker(t);
-                        handleEvaluateDirect(t);
-                      }}
-                      className="px-3.5 py-1.5 rounded-lg text-[12px] font-mono font-bold cursor-pointer transition-all hover:bg-white/5 hover:scale-105"
-                      style={{ color: "var(--accent)", border: "1px solid rgba(99,102,241,0.2)", background: "rgba(99,102,241,0.04)" }}
+                      onClick={() => { setTicker(t); handleEvaluateDirect(t); }}
+                      className="px-3 py-1 rounded text-[11px] font-mono font-semibold cursor-pointer ticker-btn"
+                      style={{ color: "var(--accent)", border: "1px solid var(--accent-border)", background: "var(--accent-dim)" }}
                     >
                       {t}
                     </button>
@@ -2694,13 +2679,13 @@ export default function HomePage() {
               )}
 
               {/* Popular Tickers */}
-              <div className="mt-5 flex flex-wrap justify-center gap-2.5 animate-fade-in stagger-3">
+              <div className="mt-3 flex flex-wrap justify-center gap-2 animate-fade-in stagger-3">
                 {popular.map((t) => (
                   <button
                     key={t}
                     onClick={() => setTicker(t)}
-                    className="px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl text-[13px] sm:text-sm font-mono font-bold cursor-pointer ticker-btn transition-all hover:scale-105"
-                    style={{ background: "var(--card)", border: "1px solid var(--border-hover)", color: "var(--text-secondary)" }}
+                    className="px-3.5 py-1.5 text-[12px] font-mono font-semibold cursor-pointer ticker-btn"
+                    style={{ background: "var(--card)", border: "1px solid var(--border)", color: "var(--text-secondary)", borderRadius: "6px" }}
                   >
                     {t}
                   </button>
@@ -2713,7 +2698,7 @@ export default function HomePage() {
           {!topStocksLoading && <MarketPulseStrip topStocks={topStocks} onEvaluate={handleEvaluateDirect} />}
 
           {/* ═══════ Rankings ═══════ */}
-          <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 pb-8">
+          <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 pb-4">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
               <div className="card rounded-xl p-4 sm:p-5 animate-slide-up" style={{ animationDelay: "100ms", animationFillMode: "both" }}>
                 <div className="flex items-center gap-2.5 mb-4 pb-3" style={{ borderBottom: "1px solid var(--border)" }}>
@@ -2770,7 +2755,7 @@ export default function HomePage() {
           </div>
 
           {/* ═══════ News ═══════ */}
-          <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 pb-12">
+          <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 pb-6">
             <div className="flex items-center gap-2.5 mb-5">
               <div className="w-2 h-2 rounded-full" style={{ background: "var(--blue)" }} />
               <h2 className="text-sm font-bold" style={{ color: "var(--text)" }}>Market News</h2>
@@ -2806,8 +2791,7 @@ export default function HomePage() {
           <div className="flex gap-2.5 max-w-2xl mx-auto px-4 sm:px-6 md:hidden">
             <button
               onClick={goHome}
-              className="px-4 py-3 rounded-xl font-bold text-sm cursor-pointer transition-all hover:bg-white/5 flex-shrink-0"
-              style={{ border: "1px solid var(--border-hover)", color: "var(--text-secondary)" }}
+              className="btn-ghost px-4 py-3 font-bold text-sm flex-shrink-0"
             >
               &#8592;
             </button>
@@ -2831,8 +2815,7 @@ export default function HomePage() {
               <button
                 type="submit"
                 disabled={loading || !ticker.trim()}
-                className="px-6 py-3 rounded-xl font-bold text-white text-sm disabled:opacity-30 cursor-pointer transition-all hover:brightness-110 whitespace-nowrap flex-shrink-0"
-                style={{ background: "linear-gradient(135deg, var(--accent), var(--blue))" }}
+                className="btn-primary px-6 py-3 text-sm whitespace-nowrap flex-shrink-0"
               >
                 {loading ? <span className="pulse-glow">...</span> : "Analyze"}
               </button>
@@ -2859,7 +2842,7 @@ export default function HomePage() {
 
       {/* ══════════════════ Results ══════════════════ */}
       {result && !loading && (
-        <div className="w-full max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-20 relative z-10 animate-fade-in">
+        <div className="w-full max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-12 relative z-10 animate-fade-in">
           <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
             {/* ──── Main Column (8/12) ──── */}
             <div className="xl:col-span-8 space-y-4">
@@ -2972,8 +2955,8 @@ export default function HomePage() {
                       }
                     }}
                     id="share-btn"
-                    className="text-[11px] font-semibold px-2.5 py-1 rounded-lg cursor-pointer transition-all hover:brightness-110"
-                    style={{ color: "var(--accent)", border: "1px solid rgba(99,102,241,0.18)", background: "rgba(99,102,241,0.05)" }}
+                    className="text-[11px] font-semibold px-2.5 py-1 rounded cursor-pointer transition-all hover:brightness-110"
+                    style={{ color: "var(--accent)", border: "1px solid var(--accent-border)", background: "var(--accent-dim)" }}
                   >
                     Share
                   </button>
