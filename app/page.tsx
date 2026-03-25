@@ -2337,8 +2337,8 @@ function NewsModal({ article, onClose }: { article: NewsItem; onClose: () => voi
 function LoadingSkeleton() {
   return (
     <div className="w-full max-w-[1180px] mx-auto mt-8 px-4 sm:px-6 animate-fade-in">
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-        <div className="xl:col-span-8 space-y-5">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="lg:col-span-8 space-y-5">
           <div className="shimmer rounded-xl h-64" />
           <div className="shimmer rounded-xl h-80" />
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -2352,7 +2352,7 @@ function LoadingSkeleton() {
           <div className="shimmer rounded-xl h-40" />
           <div className="shimmer rounded-xl h-56" />
         </div>
-        <div className="xl:col-span-4 space-y-5">
+        <div className="lg:col-span-4 space-y-5">
           <div className="shimmer rounded-xl h-56" />
           <div className="shimmer rounded-xl h-48" />
         </div>
@@ -2693,7 +2693,7 @@ export default function HomePage() {
               style={{ background: "radial-gradient(ellipse at center, rgba(0,191,165,0.05) 0%, transparent 65%)" }}
             />
 
-            <div className="relative z-10 flex flex-col items-center px-4 sm:px-6 pt-6 sm:pt-8 pb-4 sm:pb-5">
+            <div className="relative z-10 flex flex-col items-center px-4 sm:px-6 pt-10 sm:pt-14 pb-6 sm:pb-8">
               <div
                 className="text-[10px] font-semibold uppercase tracking-[0.15em] px-3 py-1 rounded mb-4 animate-fade-in"
                 style={{ background: "var(--accent-dim)", color: "var(--accent)", border: "1px solid var(--accent-border)" }}
@@ -2793,8 +2793,8 @@ export default function HomePage() {
           {!topStocksLoading && <MarketPulseStrip topStocks={topStocks} onEvaluate={handleEvaluateDirect} />}
 
           {/* ═══════ Rankings ═══════ */}
-          <div className="w-full max-w-[1180px] mx-auto px-4 sm:px-6 pb-4">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <div className="w-full max-w-[1180px] mx-auto px-4 sm:px-6 pt-2 pb-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="card rounded-xl p-4 sm:p-5 animate-slide-up" style={{ animationDelay: "100ms", animationFillMode: "both" }}>
                 <div className="flex items-center gap-2.5 mb-4 pb-3" style={{ borderBottom: "1px solid var(--border)" }}>
                   <div className="w-2 h-2 rounded-full" style={{ background: "var(--green)" }} />
@@ -2850,7 +2850,7 @@ export default function HomePage() {
           </div>
 
           {/* ═══════ News ═══════ */}
-          <div className="w-full max-w-[1180px] mx-auto px-4 sm:px-6 pb-6">
+          <div className="w-full max-w-[1180px] mx-auto px-4 sm:px-6 pt-2 pb-10">
             <div className="flex items-center gap-2.5 mb-5">
               <div className="w-2 h-2 rounded-full" style={{ background: "var(--blue)" }} />
               <h2 className="text-sm font-bold" style={{ color: "var(--text)" }}>Market News</h2>
@@ -2937,10 +2937,10 @@ export default function HomePage() {
 
       {/* ══════════════════ Results ══════════════════ */}
       {result && !loading && (
-        <div className="w-full max-w-[1180px] mx-auto px-4 sm:px-6 pt-4 pb-12 relative z-10 animate-fade-in">
-          <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
+        <div className="w-full max-w-[1180px] mx-auto px-4 sm:px-6 pt-6 pb-12 relative z-10 animate-fade-in">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             {/* ──── Main Column (8/12) ──── */}
-            <div className="xl:col-span-8 space-y-4">
+            <div className="lg:col-span-8 space-y-5">
               {/* ── Company Header ── */}
               <div
                 className="rounded-2xl p-5 sm:p-6"
@@ -3071,13 +3071,6 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {/* ─── Price Outlook Card ─── */}
-              <PriceOutlookCard
-                currentPrice={result.price}
-                analystTargets={stockDetails?.analystTargets ?? null}
-                beta={result.beta}
-              />
-
               {/* ─── AI Verdict Banner ─── */}
               <AIVerdictBanner
                 ticker={result.ticker}
@@ -3092,11 +3085,21 @@ export default function HomePage() {
                 rating={result.rating}
               />
 
+              {/* ═══ Market Data ═══ */}
+              <div className="flex items-center gap-3 pt-2">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.12em]" style={{ color: "var(--text-dim)" }}>Market Data</span>
+                <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
+              </div>
+
+              {/* ─── Price Outlook Card ─── */}
+              <PriceOutlookCard
+                currentPrice={result.price}
+                analystTargets={stockDetails?.analystTargets ?? null}
+                beta={result.beta}
+              />
+
               {/* ─── Price Chart ─── */}
               <PriceChart ticker={result.ticker} currentPrice={result.price} change={result.change} changePercent={result.changePercent} />
-
-              {/* ─── Technical Indicators (Alpha Vantage) ─── */}
-              <TechnicalIndicators ticker={result.ticker} />
 
               {/* Key Stats */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -3109,6 +3112,15 @@ export default function HomePage() {
                 <StatCard label="Open" value={result.open ? "$" + result.open.toFixed(2) : "N/A"} />
                 <StatCard label="Prev Close" value={result.previousClose ? "$" + result.previousClose.toFixed(2) : "N/A"} />
               </div>
+
+              {/* ═══ Technical Analysis ═══ */}
+              <div className="flex items-center gap-3 pt-2">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.12em]" style={{ color: "var(--text-dim)" }}>Technical Analysis</span>
+                <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
+              </div>
+
+              {/* ─── Technical Indicators (Alpha Vantage) ─── */}
+              <TechnicalIndicators ticker={result.ticker} />
 
               {/* ─── Analyst Price Targets ─── */}
               {stockDetails?.analystTargets && (
@@ -3129,14 +3141,20 @@ export default function HomePage() {
                 />
               )}
 
+              {/* ═══ Activity & News ═══ */}
+              <div className="flex items-center gap-3 pt-2">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.12em]" style={{ color: "var(--text-dim)" }}>Activity & News</span>
+                <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
+              </div>
+
               {/* ─── Stock-Specific News ─── */}
               <StockNewsSection ticker={result.ticker} onSelectArticle={setSelectedNews} />
 
-              {/* ─── Insider Activity ─── */}
-              <InsiderTradingPanel ticker={result.ticker} />
-
-              {/* ─── Institutional Holdings ─── */}
-              <InstitutionalHoldingsPanel ticker={result.ticker} />
+              {/* ─── Insider Activity + Institutional Holdings ─── */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <InsiderTradingPanel ticker={result.ticker} />
+                <InstitutionalHoldingsPanel ticker={result.ticker} />
+              </div>
 
               {/* ─── SEC Filings ─── */}
               <SECFilingsPanel ticker={result.ticker} />
@@ -3158,6 +3176,12 @@ export default function HomePage() {
                   )}
                 </div>
               )}
+
+              {/* ═══ Score Breakdown ═══ */}
+              <div className="flex items-center gap-3 pt-2">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.12em]" style={{ color: "var(--text-dim)" }}>Score Breakdown</span>
+                <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
+              </div>
 
               {/* Verdict + Scores */}
               <div className="rounded-xl p-5 space-y-4" style={{ background: result.ratingColor + "06", border: `1px solid ${result.ratingColor}18` }}>
@@ -3249,8 +3273,8 @@ export default function HomePage() {
             </div>
 
             {/* ──── Sidebar ──── */}
-            <div className="xl:col-span-4 space-y-4">
-              <div className="xl:sticky xl:top-[72px] space-y-4">
+            <div className="lg:col-span-4">
+              <div className="lg:sticky lg:top-[72px] space-y-4">
                 <div className="rounded-xl p-4" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
                   <h3 className="section-label mb-3">Category Scores</h3>
                   <CategorySummary categories={result.categories} />
