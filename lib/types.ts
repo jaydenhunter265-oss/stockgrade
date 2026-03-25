@@ -221,6 +221,18 @@ export interface CategoryScore {
   metrics: MetricScore[];
 }
 
+export interface ScoreBullet {
+  text: string;
+  sentiment: "positive" | "neutral" | "negative";
+}
+
+export interface PillarScore {
+  name: string;
+  score: number;
+  maxScore: number;
+  bullets: ScoreBullet[];
+}
+
 export interface EvaluationResult {
   ticker: string;
   companyName: string;
@@ -250,6 +262,17 @@ export interface EvaluationResult {
   growthScore: number;
   valueScore: number;
   combinedScore: number;
+  // New 4-pillar scores
+  fundamentalsScore: PillarScore;
+  technicalScore: PillarScore;
+  sentimentScore: PillarScore;
+  riskScore: PillarScore;
+  overallScore: number;
+  // Risk analysis
+  riskLevel: "Low" | "Moderate" | "High";
+  bearCase: string[];
+  // Timestamps
+  dataUpdatedAt: string;
   rating: "STRONG BUY" | "BUY" | "HOLD" | "UNDERWEIGHT" | "SELL";
   ratingColor: string;
   categories: CategoryScore[];

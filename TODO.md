@@ -1,9 +1,2 @@
-# Task Progress: Update Rankings Display + News Article Modal
+# Historical Performance Tracking Implementation\n\n## Approved Plan Steps\n- [x] 1. Create `data/performance.json` – JSON storage structure\n- [x] 2. Create `lib/performance.ts` – read/write/tracking logic\n- [x] 3. Update `lib/evaluator.ts` – auto-save scores on evaluation\n- [ ] 4. Update `app/page.tsx` – add Performance section + complete Claude's TODO (rankings/news modal)\n- [ ] 5. Create `app/performance/page.tsx` – dedicated tracking page\n- [ ] 6. Test: `npm run dev`, verify tracking, `/performance`\n- [ ] 7. Git: commit all + `git push origin main`\n\nProgress updated after each step.\n
 
-## Steps (Approved Plan)
-- [x] Create TODO.md ✓
-- [x] 1. Create app/api/article/route.ts ✓ (server-side article fetch, TS fixed)
-- [ ] 2. Edit app/page.tsx 
-  - Promote TopStockRow scores (bigger badges, /100 labels, gradients)
-  - Replace NewsModal iframe with fetched content (/api/article)
-- [ ] 3. Test: npm run dev → verify prominent scores, modal shows article text

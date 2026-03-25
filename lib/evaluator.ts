@@ -2,6 +2,8 @@ import type {
   MetricScore,
   CategoryScore,
   EvaluationResult,
+  PillarScore,
+  ScoreBullet,
 } from "./types";
 import { getRatingFromScore } from "./utils";
 import YahooFinance from "yahoo-finance2";
@@ -722,9 +724,7 @@ function evaluateRiskVolatility(d: YahooData): MetricScore[] {
   ];
 }
 
-/* ─── Main Evaluator ─── */
-
-export async function evaluateStock(ticker: string, _apiKey?: string): Promise<EvaluationResult> {
+/* ─── Main Evaluator ─── */\n\nimport { trackEvaluation } from './performance';\n\nexport async function evaluateStock(ticker: string, _apiKey?: string): Promise<EvaluationResult> {
   const symbol = ticker.toUpperCase().trim();
 
   const d = await fetchYahooData(symbol);
@@ -794,6 +794,91 @@ export async function evaluateStock(ticker: string, _apiKey?: string): Promise<E
     .filter((m) => m.score === -1 && m.value !== "N/A")
     .slice(0, 5);
 
+  // ─── 4-Pillar Scoring System ───
+  // Fundamentals (0–40): Valuation, Profitability, Liquidity, Cash Flow, Growth, Balance Sheet, Dividends
+  const fundCats = ["Valuation", "Profitability", "Liquidity & Solvency", "Cash Flow", "Growth", "Balance Sheet", "Dividends"];
+  const fundMetrics = categories.filter((c) => fundCats.includes(c.name)).flatMap((c) => c.metrics).filter((m) => m.value !== "N/A");
+  const fundRaw = fundMetrics.length > 0 ? ((fundMetrics.reduce((a, m) => a + m.score, 0) + fundMetrics.length) / (2 * fundMetrics.length)) * 40 : 20;
+  const fundBullets: ScoreBullet[] = [];
+  if (d.profitMargins != null) fundBullets.push({ text: `Net margin: ${(d.profitMargins * 100).toFixed(1)}%${d.profitMargins > 0.15 ? " (strong)" : d.profitMargins > 0.05 ? "" : " (weak)"}`, sentiment: d.profitMargins > 0.10 ? "positive" : d.profitMargins > 0.03 ? "neutral" : "negative" });
+  if (d.revenueGrowth != null) fundBullets.push({ text: `Revenue growth: ${d.revenueGrowth >= 0 ? "+" : ""}${(d.revenueGrowth * 100).toFixed(1)}%`, sentiment: d.revenueGrowth > 0.10 ? "positive" : d.revenueGrowth >= 0 ? "neutral" : "negative" });
+  if (d.returnOnEquity != null) fundBullets.push({ text: `ROE: ${(d.returnOnEquity * 100).toFixed(1)}%`, sentiment: d.returnOnEquity > 0.15 ? "positive" : d.returnOnEquity > 0.08 ? "neutral" : "negative" });
+  if (d.currentRatio != null) fundBullets.push({ text: `Current ratio: ${d.currentRatio.toFixed(2)}x${d.currentRatio >= 1.5 ? " (healthy)" : d.currentRatio >= 1.0 ? "" : " (tight)"}`, sentiment: d.currentRatio >= 1.5 ? "positive" : d.currentRatio >= 1.0 ? "neutral" : "negative" });
+  const fundamentalsScore: PillarScore = { name: "Fundamentals", score: Math.round(Math.max(0, Math.min(40, fundRaw))), maxScore: 40, bullets: fundBullets.slice(0, 4) };
+
+  // Technical (0–30): Momentum metrics + SMA/RSI signals
+  const techCats = ["Momentum"];
+  const techMetrics = categories.filter((c) => techCats.includes(c.name)).flatMap((c) => c.metrics).filter((m) => m.value !== "N/A");
+  const techRaw = techMetrics.length > 0 ? ((techMetrics.reduce((a, m) => a + m.score, 0) + techMetrics.length) / (2 * techMetrics.length)) * 30 : 15;
+  const techBullets: ScoreBullet[] = [];
+  const aboveSma50 = d.fiftyDayAverage != null ? d.price > d.fiftyDayAverage : null;
+  const aboveSma200 = d.twoHundredDayAverage != null ? d.price > d.twoHundredDayAverage : null;
+  if (aboveSma50 != null) techBullets.push({ text: `Price ${aboveSma50 ? "above" : "below"} 50-day SMA`, sentiment: aboveSma50 ? "positive" : "negative" });
+  if (aboveSma200 != null) techBullets.push({ text: `Price ${aboveSma200 ? "above" : "below"} 200-day SMA`, sentiment: aboveSma200 ? "positive" : "negative" });
+  const rangePos52 = d.fiftyTwoWeekHigh - d.fiftyTwoWeekLow > 0 ? (d.price - d.fiftyTwoWeekLow) / (d.fiftyTwoWeekHigh - d.fiftyTwoWeekLow) : null;
+  if (rangePos52 != null) techBullets.push({ text: `52-week range: ${(rangePos52 * 100).toFixed(0)}th percentile`, sentiment: rangePos52 > 0.7 ? "positive" : rangePos52 > 0.3 ? "neutral" : "negative" });
+  const volRatio = d.avgVolume > 0 ? d.volume / d.avgVolume : null;
+  if (volRatio != null) techBullets.push({ text: `Volume: ${volRatio.toFixed(2)}x average${volRatio > 1.5 ? " (high interest)" : ""}`, sentiment: volRatio > 1.2 ? "positive" : volRatio > 0.5 ? "neutral" : "negative" });
+  const technicalScorePillar: PillarScore = { name: "Technical", score: Math.round(Math.max(0, Math.min(30, techRaw))), maxScore: 30, bullets: techBullets.slice(0, 4) };
+
+  // Sentiment (0–20): derived from insider/institutional/analyst signals
+  const sentBullets: ScoreBullet[] = [];
+  let sentRaw = 10; // baseline neutral
+  // Insider sentiment from buy/sell signal counts
+  const totalBuySignals = allMetrics.filter((m) => m.score === 1 && m.value !== "N/A").length;
+  const totalSellSignals = allMetrics.filter((m) => m.score === -1 && m.value !== "N/A").length;
+  const signalRatio = (totalBuySignals + totalSellSignals) > 0 ? totalBuySignals / (totalBuySignals + totalSellSignals) : 0.5;
+  sentRaw = signalRatio * 20;
+  sentBullets.push({ text: `${totalBuySignals} buy vs ${totalSellSignals} sell signals`, sentiment: signalRatio > 0.6 ? "positive" : signalRatio > 0.4 ? "neutral" : "negative" });
+  if (d.earningsGrowth != null) sentBullets.push({ text: `Earnings ${d.earningsGrowth >= 0 ? "growing" : "declining"}: ${d.earningsGrowth >= 0 ? "+" : ""}${(d.earningsGrowth * 100).toFixed(1)}%`, sentiment: d.earningsGrowth > 0 ? "positive" : "negative" });
+  if (d.operatingMargins != null && d.profitMargins != null) {
+    const opExpanding = d.operatingMargins > (d.profitMargins + 0.02);
+    sentBullets.push({ text: `Operating margin: ${(d.operatingMargins * 100).toFixed(1)}%${opExpanding ? " (above net margin)" : ""}`, sentiment: d.operatingMargins > 0.15 ? "positive" : d.operatingMargins > 0.05 ? "neutral" : "negative" });
+  }
+  sentBullets.push({ text: signalRatio > 0.6 ? "Overall signal distribution is bullish" : signalRatio > 0.4 ? "Signals are balanced — mixed outlook" : "Signal distribution skews bearish", sentiment: signalRatio > 0.6 ? "positive" : signalRatio > 0.4 ? "neutral" : "negative" });
+  const sentimentScorePillar: PillarScore = { name: "Sentiment", score: Math.round(Math.max(0, Math.min(20, sentRaw))), maxScore: 20, bullets: sentBullets.slice(0, 4) };
+
+  // Risk (0–10): Beta, debt, volatility, market cap
+  const riskCats = ["Risk & Volatility"];
+  const riskMetrics = categories.filter((c) => riskCats.includes(c.name)).flatMap((c) => c.metrics).filter((m) => m.value !== "N/A");
+  // Also factor in debt metrics from Liquidity
+  const debtMetrics = categories.filter((c) => c.name === "Liquidity & Solvency").flatMap((c) => c.metrics).filter((m) => m.value !== "N/A");
+  const allRiskMetrics = [...riskMetrics, ...debtMetrics];
+  const riskRaw = allRiskMetrics.length > 0 ? ((allRiskMetrics.reduce((a, m) => a + m.score, 0) + allRiskMetrics.length) / (2 * allRiskMetrics.length)) * 10 : 5;
+  const riskBullets: ScoreBullet[] = [];
+  if (d.beta != null) riskBullets.push({ text: `Beta: ${d.beta.toFixed(2)}${d.beta > 1.5 ? " (high volatility)" : d.beta < 0.8 ? " (defensive)" : ""}`, sentiment: d.beta >= 0.5 && d.beta <= 1.2 ? "positive" : d.beta > 2 ? "negative" : "neutral" });
+  const debtToEquity = d.debtToEquity != null ? d.debtToEquity / 100 : null;
+  if (debtToEquity != null) riskBullets.push({ text: `Debt/Equity: ${debtToEquity.toFixed(2)}x${debtToEquity > 2 ? " (heavily leveraged)" : debtToEquity < 0.5 ? " (low leverage)" : ""}`, sentiment: debtToEquity < 0.5 ? "positive" : debtToEquity < 1.5 ? "neutral" : "negative" });
+  if (d.marketCap > 0) {
+    const capLabel = d.marketCap > 200e9 ? "Mega-cap" : d.marketCap > 10e9 ? "Large-cap" : d.marketCap > 2e9 ? "Mid-cap" : d.marketCap > 300e6 ? "Small-cap" : "Micro-cap";
+    riskBullets.push({ text: `${capLabel}: $${(d.marketCap / 1e9).toFixed(1)}B`, sentiment: d.marketCap > 2e9 ? "positive" : d.marketCap > 300e6 ? "neutral" : "negative" });
+  }
+  const netDebt = d.totalDebt != null && d.totalCash != null ? d.totalDebt - d.totalCash : null;
+  if (netDebt != null) riskBullets.push({ text: netDebt < 0 ? `Net cash position: $${(Math.abs(netDebt) / 1e6).toFixed(0)}M` : `Net debt: $${(netDebt / 1e6).toFixed(0)}M`, sentiment: netDebt < 0 ? "positive" : "negative" });
+  const riskScorePillar: PillarScore = { name: "Risk", score: Math.round(Math.max(0, Math.min(10, riskRaw))), maxScore: 10, bullets: riskBullets.slice(0, 4) };
+
+  // Overall Score (0–100): sum of all 4 pillars
+  const overallScore = fundamentalsScore.score + technicalScorePillar.score + sentimentScorePillar.score + riskScorePillar.score;
+
+  // ─── Risk Level ───
+  const riskLevel: "Low" | "Moderate" | "High" =
+    riskScorePillar.score >= 7 && (d.beta == null || d.beta <= 1.3) && (debtToEquity == null || debtToEquity < 1.0) ? "Low"
+    : riskScorePillar.score <= 3 || (d.beta != null && d.beta > 2.0) || (debtToEquity != null && debtToEquity > 2.5) ? "High"
+    : "Moderate";
+
+  // ─── Bear Case ───
+  const bearCase: string[] = [];
+  if (d.trailingPE != null && d.trailingPE > 40) bearCase.push(`High valuation (P/E ${d.trailingPE.toFixed(1)}) leaves little margin for earnings misses.`);
+  if (d.revenueGrowth != null && d.revenueGrowth < 0) bearCase.push(`Revenue is declining (${(d.revenueGrowth * 100).toFixed(1)}% YoY), suggesting weakening demand.`);
+  if (debtToEquity != null && debtToEquity > 1.5) bearCase.push(`High leverage (D/E ${debtToEquity.toFixed(2)}x) increases vulnerability to rising interest rates.`);
+  if (d.beta != null && d.beta > 1.8) bearCase.push(`High beta (${d.beta.toFixed(2)}) means outsized losses in market downturns.`);
+  if (d.profitMargins != null && d.profitMargins < 0.03) bearCase.push(`Thin profit margins (${(d.profitMargins * 100).toFixed(1)}%) leave little room for cost pressures.`);
+  if (d.freeCashflow != null && d.freeCashflow < 0) bearCase.push("Negative free cash flow — company is burning cash.");
+  if (d.currentRatio != null && d.currentRatio < 1.0) bearCase.push(`Current ratio below 1.0 (${d.currentRatio.toFixed(2)}x) — potential liquidity strain.`);
+  const vs52High = d.fiftyTwoWeekHigh > 0 ? (d.price - d.fiftyTwoWeekHigh) / d.fiftyTwoWeekHigh : null;
+  if (vs52High != null && vs52High < -0.30) bearCase.push(`Stock is ${Math.abs(vs52High * 100).toFixed(0)}% below its 52-week high — sustained downtrend.`);
+  if (bearCase.length === 0) bearCase.push("No significant red flags identified at this time.");
+
   // Get company logo from website domain
   let image = "";
   if (d.website) {
@@ -805,7 +890,7 @@ export async function evaluateStock(ticker: string, _apiKey?: string): Promise<E
     }
   }
 
-  return {
+  const now = new Date().toISOString();\n\n  const result = {
     ticker: symbol,
     companyName: d.companyName,
     sector: d.sector,
@@ -834,11 +919,17 @@ export async function evaluateStock(ticker: string, _apiKey?: string): Promise<E
     growthScore,
     valueScore,
     combinedScore,
+    fundamentalsScore,
+    technicalScore: technicalScorePillar,
+    sentimentScore: sentimentScorePillar,
+    riskScore: riskScorePillar,
+    overallScore,
+    riskLevel,
+    bearCase: bearCase.slice(0, 3),
+    dataUpdatedAt: now,
     rating,
     ratingColor: color,
     categories,
     topSignals,
     redFlags,
-    evaluatedAt: new Date().toISOString(),
-  };
-}
+    evaluatedAt: now,\n  };\n\n  // Track for historical performance\n  trackEvaluation(result).catch(console.error);\n\n  return result;\n}

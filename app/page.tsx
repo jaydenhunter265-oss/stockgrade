@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import type { EvaluationResult, CategoryScore, MetricScore } from "@/lib/types";
+import type { EvaluationResult, CategoryScore, MetricScore, PillarScore } from "@/lib/types";
 import { formatNumber, cn, timeAgo } from "@/lib/utils";
 import PriceChart from "@/components/price-chart";
 
@@ -1034,6 +1034,152 @@ function AIVerdictBanner({
             {sentence1}{" "}{sentence2}
           </p>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════ 4-Pillar Score Breakdown ══════════════════ */
+
+function PillarScoreCard({ pillar }: { pillar: PillarScore }) {
+  const pct = pillar.maxScore > 0 ? (pillar.score / pillar.maxScore) * 100 : 50;
+  const barColor = pct >= 65 ? "#10b981" : pct >= 40 ? "#f59e0b" : "#ef4444";
+  const pillColors: Record<string, string> = {
+    Fundamentals: "#10b981",
+    Technical: "#3b82f6",
+    Sentiment: "#a78bfa",
+    Risk: "#f59e0b",
+  };
+  const color = pillColors[pillar.name] ?? barColor;
+
+  return (
+    <div className="rounded-xl p-4" style={{ background: color + "08", border: `1px solid ${color}18` }}>
+      <div className="flex items-center justify-between mb-3">
+        <div className="text-[11px] font-bold uppercase tracking-wider" style={{ color }}>{pillar.name}</div>
+        <div className="flex items-baseline gap-1">
+          <span className="text-lg font-black font-mono" style={{ color }}>{pillar.score}</span>
+          <span className="text-[10px] font-mono opacity-50" style={{ color }}>/{pillar.maxScore}</span>
+        </div>
+      </div>
+      <div className="h-1.5 rounded-full mb-3" style={{ background: "var(--border)" }}>
+        <div className="h-full rounded-full metric-bar" style={{ width: `${pct}%`, background: color }} />
+      </div>
+      <div className="space-y-1.5">
+        {pillar.bullets.map((bullet, i) => (
+          <div key={i} className="flex items-start gap-2">
+            <span className="text-[10px] mt-0.5 flex-shrink-0" style={{ color: bullet.sentiment === "positive" ? "#10b981" : bullet.sentiment === "negative" ? "#ef4444" : "#f59e0b" }}>
+              {bullet.sentiment === "positive" ? "✓" : bullet.sentiment === "negative" ? "✗" : "◆"}
+            </span>
+            <span className="text-[11px] leading-snug" style={{ color: "var(--text-secondary)" }}>{bullet.text}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function FourPillarBreakdown({ result }: { result: EvaluationResult }) {
+  const pillars = [result.fundamentalsScore, result.technicalScore, result.sentimentScore, result.riskScore];
+  const overallColor = result.overallScore >= 70 ? "#10b981" : result.overallScore >= 45 ? "#f59e0b" : "#ef4444";
+
+  return (
+    <div className="card rounded-xl p-5">
+      <div className="flex items-center justify-between mb-4">
+        <div className="section-label">Score Breakdown</div>
+        <div className="flex items-baseline gap-1.5">
+          <span className="text-[10px] font-medium" style={{ color: "var(--text-dim)" }}>Overall</span>
+          <span className="text-xl font-black font-mono" style={{ color: overallColor }}>{result.overallScore}</span>
+          <span className="text-[10px] font-mono opacity-40" style={{ color: overallColor }}>/100</span>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {pillars.map((p) => (
+          <PillarScoreCard key={p.name} pillar={p} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════ Risk & Bear Case ══════════════════ */
+
+function RiskBearCaseSection({ result }: { result: EvaluationResult }) {
+  const riskColor = result.riskLevel === "Low" ? "#10b981" : result.riskLevel === "Moderate" ? "#f59e0b" : "#ef4444";
+
+  return (
+    <div className="card rounded-xl p-5">
+      <div className="flex items-center justify-between mb-4">
+        <div className="section-label">Risk & Downside Analysis</div>
+        <span
+          className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded"
+          style={{ background: riskColor + "12", color: riskColor, border: `1px solid ${riskColor}22` }}
+        >
+          {result.riskLevel} Risk
+        </span>
+      </div>
+
+      {/* Risk meter */}
+      <div className="mb-5">
+        <div className="flex justify-between text-[9px] font-mono mb-1.5" style={{ color: "var(--text-dim)" }}>
+          <span>Low</span>
+          <span>Moderate</span>
+          <span>High</span>
+        </div>
+        <div className="relative h-2 rounded-full" style={{ background: "var(--border)" }}>
+          <div
+            className="absolute inset-0 rounded-full"
+            style={{ background: "linear-gradient(90deg, #10b981, #f59e0b, #ef4444)", opacity: 0.3 }}
+          />
+          <div
+            className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2"
+            style={{
+              left: `calc(${result.riskLevel === "Low" ? 16 : result.riskLevel === "Moderate" ? 50 : 84}% - 6px)`,
+              background: riskColor,
+              borderColor: "var(--bg)",
+              boxShadow: `0 0 8px ${riskColor}60`,
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Bear Case */}
+      <div>
+        <div className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: "#ef4444" }}>
+          Bear Case — What Could Go Wrong
+        </div>
+        <div className="space-y-2">
+          {result.bearCase.map((bullet, i) => (
+            <div
+              key={i}
+              className="flex items-start gap-2.5 px-3 py-2.5 rounded-lg"
+              style={{ background: "rgba(239,68,68,0.04)", border: "1px solid rgba(239,68,68,0.10)" }}
+            >
+              <span className="text-[10px] font-black mt-0.5 flex-shrink-0" style={{ color: "#ef4444" }}>!</span>
+              <span className="text-[12px] leading-relaxed" style={{ color: "var(--text-secondary)" }}>{bullet}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════ Timestamps Display ══════════════════ */
+
+function TimestampBadge({ result }: { result: EvaluationResult }) {
+  const generatedDate = new Date(result.evaluatedAt);
+  const dataDate = new Date(result.dataUpdatedAt);
+  const formatDate = (d: Date) => d.toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true });
+
+  return (
+    <div className="flex flex-wrap items-center gap-3 text-[10px]" style={{ color: "var(--text-dim)" }}>
+      <div className="flex items-center gap-1.5">
+        <div className="w-1 h-1 rounded-full" style={{ background: "var(--accent)" }} />
+        <span>Generated: {formatDate(generatedDate)}</span>
+      </div>
+      <div className="flex items-center gap-1.5">
+        <div className="w-1 h-1 rounded-full" style={{ background: "#3b82f6" }} />
+        <span>Data updated: {formatDate(dataDate)}</span>
       </div>
     </div>
   );
@@ -2689,27 +2835,29 @@ export default function HomePage() {
           {/* Hero + Search */}
           <div className="relative grid-pattern">
             <div
-              className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] pointer-events-none"
-              style={{ background: "radial-gradient(ellipse at center, rgba(0,191,165,0.05) 0%, transparent 65%)" }}
+              className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[400px] pointer-events-none"
+              style={{ background: "radial-gradient(ellipse at center, rgba(0,191,165,0.06) 0%, transparent 60%)" }}
             />
 
-            <div className="relative z-10 flex flex-col items-center px-4 sm:px-6 pt-10 sm:pt-14 pb-6 sm:pb-8">
+            <div className="relative z-10 flex flex-col items-center px-4 sm:px-6 pt-14 sm:pt-20 pb-8 sm:pb-10">
               <div
-                className="text-[10px] font-semibold uppercase tracking-[0.15em] px-3 py-1 rounded mb-4 animate-fade-in"
+                className="text-[10px] font-semibold uppercase tracking-[0.15em] px-3 py-1 rounded mb-5 animate-fade-in"
                 style={{ background: "var(--accent-dim)", color: "var(--accent)", border: "1px solid var(--accent-border)" }}
               >
-                Institutional-Grade Analysis · 350+ Metrics
+                350+ Metrics · Real Data · Transparent Scoring
               </div>
 
               <h1
-                className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-center mb-3 animate-fade-in stagger-1"
-                style={{ color: "var(--text)", lineHeight: 1.08 }}
+                className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-center mb-4 animate-fade-in stagger-1"
+                style={{ color: "var(--text)", lineHeight: 1.08, maxWidth: "700px" }}
               >
-                Evaluate Any <span className="gradient-text">Stock</span>
+                Smarter Stock Picks.{" "}
+                <span className="gradient-text">Backed by Data.</span>
               </h1>
 
-              <p className="text-sm text-center max-w-sm mb-5 animate-fade-in stagger-2" style={{ color: "var(--text-muted)" }}>
-                Instant Buy/Sell ratings powered by quantitative analysis.
+              <p className="text-sm sm:text-base text-center max-w-lg mb-7 animate-fade-in stagger-2 leading-relaxed" style={{ color: "var(--text-muted)" }}>
+                Transparent grading system using fundamentals, technicals, and sentiment.
+                Every score explained. Every metric visible.
               </p>
 
               {/* Search Box */}
@@ -2727,7 +2875,7 @@ export default function HomePage() {
                       type="text"
                       value={ticker}
                       onChange={(e) => setTicker(e.target.value.toUpperCase())}
-                      placeholder="Search any ticker... AAPL, TSLA, NVDA"
+                      placeholder="Enter stock ticker (AAPL, TSLA, NVDA...)"
                       className="flex-1 py-4 sm:py-5 text-base sm:text-lg font-mono bg-transparent placeholder:text-zinc-600 tracking-wide"
                       style={{ color: "var(--text)", border: "none", outline: "none" }}
                       autoFocus
@@ -2749,7 +2897,7 @@ export default function HomePage() {
                       disabled={loading || !ticker.trim()}
                       className="btn-primary m-1.5 px-6 sm:px-8 py-2.5 sm:py-3 text-sm rounded"
                     >
-                      {loading ? <span className="pulse-glow">Analyzing...</span> : "Evaluate"}
+                      {loading ? <span className="pulse-glow">Analyzing...</span> : "Analyze Stock"}
                     </button>
                   </div>
                 </div>
@@ -2789,11 +2937,169 @@ export default function HomePage() {
             </div>
           </div>
 
+          {/* ═══════ Feature Strip — 3 Cards ═══════ */}
+          <div className="w-full max-w-[900px] mx-auto px-4 sm:px-6 pb-10">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {[
+                {
+                  icon: "◎",
+                  title: "Transparent Scoring",
+                  desc: "Every metric explained. See exactly how each score is calculated across 9 categories.",
+                  color: "var(--accent)",
+                },
+                {
+                  icon: "◆",
+                  title: "Real Performance Tracking",
+                  desc: "Track past picks, win rate, and returns compared to the S&P 500.",
+                  color: "#3b82f6",
+                },
+                {
+                  icon: "⬡",
+                  title: "Multi-Source Data",
+                  desc: "Fundamentals, technicals, sentiment, and risk — all from trusted data sources.",
+                  color: "#a78bfa",
+                },
+              ].map((card) => (
+                <div
+                  key={card.title}
+                  className="rounded-xl p-5 transition-all duration-200 hover:translate-y-[-2px]"
+                  style={{
+                    background: "var(--card)",
+                    border: "1px solid var(--border)",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+                  }}
+                >
+                  <div
+                    className="w-9 h-9 rounded-lg flex items-center justify-center text-base font-black mb-3"
+                    style={{ background: card.color + "12", color: card.color }}
+                  >
+                    {card.icon}
+                  </div>
+                  <h3 className="text-sm font-bold mb-1.5" style={{ color: "var(--text)" }}>{card.title}</h3>
+                  <p className="text-[12px] leading-relaxed" style={{ color: "var(--text-muted)" }}>{card.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* ═══════ Today's Top Picks ═══════ */}
+          <div className="w-full max-w-[900px] mx-auto px-4 sm:px-6 pb-10">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: "var(--green)" }} />
+              <h2 className="text-base font-bold" style={{ color: "var(--text)" }}>Today&apos;s Top Picks</h2>
+              <div className="flex-1 h-px ml-2" style={{ background: "var(--border)" }} />
+            </div>
+
+            {topStocksLoading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[1, 2, 3].map((i) => <div key={i} className="shimmer rounded-xl h-36" />)}
+              </div>
+            ) : topStocks?.topBuy?.length ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {topStocks.topBuy.slice(0, 5).map((stock) => {
+                  const riskFromScore = stock.combinedScore >= 65 ? "Low" : stock.combinedScore >= 40 ? "Moderate" : "High";
+                  const riskColor = riskFromScore === "Low" ? "#10b981" : riskFromScore === "Moderate" ? "#f59e0b" : "#ef4444";
+                  return (
+                    <div
+                      key={stock.ticker}
+                      onClick={() => handleEvaluateDirect(stock.ticker)}
+                      className="rounded-xl p-4 cursor-pointer transition-all duration-200 hover:translate-y-[-2px] group"
+                      style={{
+                        background: "var(--card)",
+                        border: "1px solid var(--border)",
+                        boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                      }}
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2.5">
+                          {stock.image && (
+                            <img
+                              src={stock.image}
+                              alt=""
+                              className="w-8 h-8 rounded-lg flex-shrink-0"
+                              style={{ border: "1px solid var(--border)" }}
+                              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                            />
+                          )}
+                          <div>
+                            <div className="text-sm font-black font-mono" style={{ color: "var(--text)" }}>{stock.ticker}</div>
+                            <div className="text-[10px] truncate max-w-[120px]" style={{ color: "var(--text-dim)" }}>{stock.companyName}</div>
+                          </div>
+                        </div>
+                        <div
+                          className="w-12 h-12 rounded-xl flex flex-col items-center justify-center"
+                          style={{ background: stock.ratingColor + "12", border: `1px solid ${stock.ratingColor}28` }}
+                        >
+                          <span className="text-lg font-black font-mono leading-none" style={{ color: stock.ratingColor }}>{stock.combinedScore}</span>
+                          <span className="text-[7px] font-bold opacity-50 mt-0.5" style={{ color: stock.ratingColor }}>/100</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="text-[9px] font-bold uppercase tracking-wide px-2 py-0.5 rounded"
+                          style={{ background: stock.ratingColor + "12", color: stock.ratingColor }}
+                        >
+                          {stock.rating}
+                        </span>
+                        <span
+                          className="text-[9px] font-bold px-2 py-0.5 rounded"
+                          style={{ background: riskColor + "12", color: riskColor }}
+                        >
+                          {riskFromScore} Risk
+                        </span>
+                        <span className="text-[10px] font-mono ml-auto" style={{ color: stock.changePercent >= 0 ? "var(--green)" : "var(--red)" }}>
+                          {stock.changePercent >= 0 ? "+" : ""}{stock.changePercent.toFixed(2)}%
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="card rounded-xl p-8 text-center">
+                <p className="text-sm" style={{ color: "var(--text-dim)" }}>Loading top picks...</p>
+              </div>
+            )}
+          </div>
+
+          {/* ═══════ Performance Preview ═══════ */}
+          <div className="w-full max-w-[900px] mx-auto px-4 sm:px-6 pb-10">
+            <div className="rounded-xl p-6" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+              <div className="flex items-center gap-2.5 mb-5">
+                <div className="w-2 h-2 rounded-full" style={{ background: "#3b82f6" }} />
+                <h2 className="text-sm font-bold" style={{ color: "var(--text)" }}>Our Picks vs The Market</h2>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="text-center">
+                  <div className="text-2xl font-black font-mono" style={{ color: "var(--accent)" }}>350+</div>
+                  <div className="text-[10px] font-medium mt-1" style={{ color: "var(--text-dim)" }}>Metrics Analyzed</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-black font-mono" style={{ color: "#10b981" }}>9</div>
+                  <div className="text-[10px] font-medium mt-1" style={{ color: "var(--text-dim)" }}>Score Categories</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-black font-mono" style={{ color: "#3b82f6" }}>20</div>
+                  <div className="text-[10px] font-medium mt-1" style={{ color: "var(--text-dim)" }}>Stocks Tracked</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-black font-mono" style={{ color: "#a78bfa" }}>4</div>
+                  <div className="text-[10px] font-medium mt-1" style={{ color: "var(--text-dim)" }}>Pillar Scores</div>
+                </div>
+              </div>
+              <div className="mt-5 pt-4 text-center" style={{ borderTop: "1px solid var(--border)" }}>
+                <p className="text-[12px]" style={{ color: "var(--text-muted)" }}>
+                  Each stock is graded on Fundamentals (40pts), Technicals (30pts), Sentiment (20pts), and Risk (10pts) for a transparent 100-point score.
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* ═══════ Market Movers ═══════ */}
           {!topStocksLoading && <MarketPulseStrip topStocks={topStocks} onEvaluate={handleEvaluateDirect} />}
 
-          {/* ═══════ Rankings ═══════ */}
-          <div className="w-full max-w-[1180px] mx-auto px-4 sm:px-6 pt-2 pb-8">
+          {/* ═══════ Full Rankings ═══════ */}
+          <div className="w-full max-w-[900px] mx-auto px-4 sm:px-6 pt-2 pb-8">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="card rounded-xl p-4 sm:p-5 animate-slide-up" style={{ animationDelay: "100ms", animationFillMode: "both" }}>
                 <div className="flex items-center gap-2.5 mb-4 pb-3" style={{ borderBottom: "1px solid var(--border)" }}>
@@ -2850,7 +3156,7 @@ export default function HomePage() {
           </div>
 
           {/* ═══════ News ═══════ */}
-          <div className="w-full max-w-[1180px] mx-auto px-4 sm:px-6 pt-2 pb-10">
+          <div className="w-full max-w-[900px] mx-auto px-4 sm:px-6 pt-2 pb-10">
             <div className="flex items-center gap-2.5 mb-5">
               <div className="w-2 h-2 rounded-full" style={{ background: "var(--blue)" }} />
               <h2 className="text-sm font-bold" style={{ color: "var(--text)" }}>Market News</h2>
@@ -3084,6 +3390,19 @@ export default function HomePage() {
                 ratingColor={result.ratingColor}
                 rating={result.rating}
               />
+
+              {/* ─── Timestamps ─── */}
+              <TimestampBadge result={result} />
+
+              {/* ─── 4-Pillar Score Breakdown ─── */}
+              {result.fundamentalsScore && (
+                <FourPillarBreakdown result={result} />
+              )}
+
+              {/* ─── Risk & Bear Case ─── */}
+              {result.bearCase && result.bearCase.length > 0 && (
+                <RiskBearCaseSection result={result} />
+              )}
 
               {/* ═══ Market Data ═══ */}
               <div className="flex items-center gap-3 pt-2">
@@ -3397,18 +3716,40 @@ export default function HomePage() {
 
       {/* ═══════ Footer ═══════ */}
       <footer className="relative z-10 mt-auto" style={{ borderTop: "1px solid var(--border)" }}>
-        <div className="w-full max-w-[1180px] mx-auto px-4 sm:px-6 py-4">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded flex items-center justify-center text-[8px] font-black text-white flex-shrink-0" style={{ background: "var(--accent)" }}>
-                S
+        <div className="w-full max-w-[900px] mx-auto px-4 sm:px-6 py-8">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-6">
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-5 h-5 rounded flex items-center justify-center text-[9px] font-black text-white flex-shrink-0" style={{ background: "var(--accent)" }}>
+                  S
+                </div>
+                <span className="text-[13px] font-bold" style={{ color: "var(--text-secondary)" }}>StockGrade</span>
               </div>
-              <span className="text-[11px] font-medium" style={{ color: "var(--text-dim)" }}>
-                StockGrade &copy; {new Date().getFullYear()}
-              </span>
+              <p className="text-[11px] leading-relaxed" style={{ color: "var(--text-dim)" }}>
+                Transparent, data-driven stock analysis powered by 350+ quantitative metrics.
+              </p>
             </div>
+            <div>
+              <h4 className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: "var(--text-dim)" }}>Resources</h4>
+              <div className="space-y-2">
+                <a href="/methodology" className="block text-[12px] transition-colors hover:text-white" style={{ color: "var(--text-muted)" }}>Methodology</a>
+                <button onClick={() => { setTicker("AAPL"); handleEvaluateDirect("AAPL"); }} className="block text-[12px] transition-colors hover:text-white cursor-pointer" style={{ color: "var(--text-muted)", background: "none", border: "none", padding: 0 }}>Example Analysis</button>
+              </div>
+            </div>
+            <div>
+              <h4 className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: "var(--text-dim)" }}>Legal</h4>
+              <div className="space-y-2">
+                <span className="block text-[12px]" style={{ color: "var(--text-muted)" }}>Disclaimer</span>
+                <span className="block text-[12px]" style={{ color: "var(--text-muted)" }}>About</span>
+              </div>
+            </div>
+          </div>
+          <div className="pt-4 flex flex-col sm:flex-row items-center justify-between gap-2" style={{ borderTop: "1px solid var(--border)" }}>
+            <span className="text-[11px] font-medium" style={{ color: "var(--text-dim)" }}>
+              &copy; {new Date().getFullYear()} StockGrade. All rights reserved.
+            </span>
             <p className="text-[10px]" style={{ color: "var(--text-dim)", opacity: 0.45 }}>
-              Data via Yahoo Finance · Algorithmic scores · Not financial advice
+              Data via Yahoo Finance &middot; Not financial advice &middot; For informational purposes only
             </p>
           </div>
         </div>
