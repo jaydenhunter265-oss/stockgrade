@@ -734,6 +734,45 @@ function ScoreInsightsPanel({
   );
 }
 
+/* ══════════════════ Half Gauge ══════════════════ */
+
+const GAUGE_R = 42;
+const GAUGE_CX = 50;
+const GAUGE_CY = 52;
+const GAUGE_HALF_CIRC = Math.PI * GAUGE_R;
+const GAUGE_ARC = `M ${GAUGE_CX - GAUGE_R} ${GAUGE_CY} A ${GAUGE_R} ${GAUGE_R} 0 0 1 ${GAUGE_CX + GAUGE_R} ${GAUGE_CY}`;
+
+function HalfGauge({ label, score, color, sub }: { label: string; score: number; color: string; sub?: string }) {
+  const offset = GAUGE_HALF_CIRC * (1 - Math.min(score, 100) / 100);
+  return (
+    <div className="rounded-xl p-3 text-center" style={{ background: `${color}0d`, border: `1px solid ${color}28` }}>
+      <svg viewBox="0 0 100 58" className="w-full">
+        <path d={GAUGE_ARC} fill="none" stroke="#1e2030" strokeWidth="7" strokeLinecap="round" />
+        <path
+          d={GAUGE_ARC} fill="none" stroke={color} strokeWidth="9" strokeLinecap="round"
+          strokeDasharray={GAUGE_HALF_CIRC} strokeDashoffset={offset}
+          opacity="0.15" style={{ filter: "blur(3px)" }}
+          className="half-gauge-arc"
+        />
+        <path
+          d={GAUGE_ARC} fill="none" stroke={color} strokeWidth="6" strokeLinecap="round"
+          strokeDasharray={GAUGE_HALF_CIRC} strokeDashoffset={offset}
+          className="half-gauge-arc"
+          style={{ filter: `drop-shadow(0 0 4px ${color}60)` }}
+        />
+        <text x="50" y="40" textAnchor="middle" fill="#e6edf3" fontSize="20" fontWeight="800" fontFamily="var(--font-sans)">
+          {score}
+        </text>
+        <text x="50" y="50" textAnchor="middle" fill="#3d4455" fontSize="6" fontFamily="var(--font-sans)">
+          /100
+        </text>
+      </svg>
+      <div className="text-[9px] font-bold uppercase tracking-wider mt-0.5" style={{ color }}>{label}</div>
+      {sub && <div className="text-[8px] mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>{sub}</div>}
+    </div>
+  );
+}
+
 /* ══════════════════ Four Score Panel ══════════════════ */
 
 function FourScorePanel({
@@ -778,16 +817,7 @@ function FourScorePanel({
   return (
     <div className="grid grid-cols-2 gap-3">
       {scores.map(({ label, score, color, sub }) => (
-        <div
-          key={label}
-          className="rounded-xl p-4 text-center"
-          style={{ background: color + "0d", border: `1px solid ${color}25` }}
-        >
-          <div className="text-[30px] font-black font-mono leading-none" style={{ color }}>{score}</div>
-          <div className="text-[8px] opacity-30 font-mono leading-none mt-0.5" style={{ color }}>/100</div>
-          <div className="text-[9px] font-bold uppercase tracking-wider mt-1.5" style={{ color }}>{label}</div>
-          <div className="text-[8px] mt-0.5 opacity-50" style={{ color: "var(--text-dim)" }}>{sub}</div>
-        </div>
+        <HalfGauge key={label} label={label} score={score} color={color} sub={sub} />
       ))}
     </div>
   );

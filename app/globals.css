@@ -36,8 +36,8 @@
   --accent-dim:    rgba(0, 191, 165, 0.12);
   --accent-border: rgba(0, 191, 165, 0.25);
 
-  /* Font alias — referenced by score-gauge SVG text */
-  --font-inter:    var(--font-sans);
+  /* Font mono alias — Tomorrow for all text */
+  --font-mono:     var(--font-sans);
 }
 
 /* ═══════════════════════════════════════════════
@@ -62,7 +62,7 @@ html {
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: var(--font-sans, Inter), system-ui, -apple-system,
+  font-family: var(--font-sans, Tomorrow), system-ui, -apple-system,
                BlinkMacSystemFont, 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -73,9 +73,9 @@ body {
   font-size: 14px;
 }
 
-/* Monospace — IBM Plex Mono for all numeric/code contexts */
+/* Monospace — Tomorrow for all text including numeric/code */
 .font-mono, code, kbd, pre, samp {
-  font-family: var(--font-mono, 'IBM Plex Mono'), ui-monospace, Menlo, Consolas, monospace;
+  font-family: var(--font-sans, Tomorrow), system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0;
 }
@@ -113,6 +113,7 @@ body {
 }
 
 @keyframes gaugeFill     { from { stroke-dashoffset: 283; } }
+@keyframes halfGaugeFill { from { stroke-dashoffset: 132; } }
 @keyframes barFill       { from { width: 0; } }
 
 @keyframes shimmer {
@@ -158,8 +159,9 @@ body {
 .animate-fade-in  { animation: fadeIn  0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 .animate-slide-up { animation: slideUp 0.4s  cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 
-.gauge-circle { animation: gaugeFill 1.4s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
-.metric-bar   { animation: barFill   0.7s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+.gauge-circle   { animation: gaugeFill     1.4s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+.half-gauge-arc { animation: halfGaugeFill 1.4s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+.metric-bar     { animation: barFill       0.7s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
 
 .shimmer {
   background: linear-gradient(
