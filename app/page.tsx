@@ -1763,7 +1763,7 @@ function MarketPulseStrip({
   if (movers.length === 0) return null;
 
   return (
-    <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 mb-4">
+    <div className="w-full max-w-[1180px] mx-auto px-4 sm:px-6 mb-4">
       <div className="flex items-center gap-2 mb-3">
         <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: "#10b981" }} />
         <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--text-dim)" }}>
@@ -2336,7 +2336,7 @@ function NewsModal({ article, onClose }: { article: NewsItem; onClose: () => voi
 
 function LoadingSkeleton() {
   return (
-    <div className="w-full max-w-screen-2xl mx-auto mt-8 px-4 sm:px-8 animate-fade-in">
+    <div className="w-full max-w-[1180px] mx-auto mt-8 px-4 sm:px-6 animate-fade-in">
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
         <div className="xl:col-span-8 space-y-5">
           <div className="shimmer rounded-xl h-64" />
@@ -2599,7 +2599,7 @@ export default function HomePage() {
           WebkitBackdropFilter: "blur(20px)",
         }}
       >
-        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center gap-4">
+        <div className="w-full max-w-[1180px] mx-auto px-4 sm:px-6 h-14 flex items-center gap-4">
           {/* Logo */}
           <button
             onClick={goHome}
@@ -2793,7 +2793,7 @@ export default function HomePage() {
           {!topStocksLoading && <MarketPulseStrip topStocks={topStocks} onEvaluate={handleEvaluateDirect} />}
 
           {/* ═══════ Rankings ═══════ */}
-          <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 pb-4">
+          <div className="w-full max-w-[1180px] mx-auto px-4 sm:px-6 pb-4">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
               <div className="card rounded-xl p-4 sm:p-5 animate-slide-up" style={{ animationDelay: "100ms", animationFillMode: "both" }}>
                 <div className="flex items-center gap-2.5 mb-4 pb-3" style={{ borderBottom: "1px solid var(--border)" }}>
@@ -2850,7 +2850,7 @@ export default function HomePage() {
           </div>
 
           {/* ═══════ News ═══════ */}
-          <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 pb-6">
+          <div className="w-full max-w-[1180px] mx-auto px-4 sm:px-6 pb-6">
             <div className="flex items-center gap-2.5 mb-5">
               <div className="w-2 h-2 rounded-full" style={{ background: "var(--blue)" }} />
               <h2 className="text-sm font-bold" style={{ color: "var(--text)" }}>Market News</h2>
@@ -2937,7 +2937,7 @@ export default function HomePage() {
 
       {/* ══════════════════ Results ══════════════════ */}
       {result && !loading && (
-        <div className="w-full max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-12 relative z-10 animate-fade-in">
+        <div className="w-full max-w-[1180px] mx-auto px-4 sm:px-6 pt-4 pb-12 relative z-10 animate-fade-in">
           <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
             {/* ──── Main Column (8/12) ──── */}
             <div className="xl:col-span-8 space-y-4">
@@ -3373,7 +3373,7 @@ export default function HomePage() {
 
       {/* ═══════ Footer ═══════ */}
       <footer className="relative z-10 mt-auto" style={{ borderTop: "1px solid var(--border)" }}>
-        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-4">
+        <div className="w-full max-w-[1180px] mx-auto px-4 sm:px-6 py-4">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 rounded flex items-center justify-center text-[8px] font-black text-white flex-shrink-0" style={{ background: "var(--accent)" }}>
