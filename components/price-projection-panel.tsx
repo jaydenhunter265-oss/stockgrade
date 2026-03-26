@@ -27,9 +27,20 @@ interface AnalystTargets {
   targetHigh: number | null;
 }
 
-type Horizon = 1 | 3 | 6 | 12;
+// 5 = 5 trading days; others = months
+type Horizon = 5 | 1 | 3 | 6 | 12;
+
+// Maps horizon value → fraction of a trading year
+const T_YEARS: Record<Horizon, number> = {
+  5:  5  / 252,
+  1:  1  / 12,
+  3:  3  / 12,
+  6:  6  / 12,
+  12: 12 / 12,
+};
 
 const HORIZONS: { value: Horizon; label: string; tradingDays: number }[] = [
+  { value: 5,  label: "5D",  tradingDays: 5   },
   { value: 1,  label: "1M",  tradingDays: 21  },
   { value: 3,  label: "3M",  tradingDays: 63  },
   { value: 6,  label: "6M",  tradingDays: 126 },
@@ -38,7 +49,7 @@ const HORIZONS: { value: Horizon; label: string; tradingDays: number }[] = [
 
 type SeriesPoint = { time: UTCTimestamp; value: number };
 
-/* ── Projection math ── */
+/* ── Projection price math ── */
 
 function calcProjection(
   price: number,
@@ -58,7 +69,7 @@ function calcProjection(
     (change >= 0 ? 0.015 : -0.015) +
     ((score - 50) / 100) * 0.10;
 
-  const T = horizon / 12;
+  const T = T_YEARS[horizon];
   const tVol = annualVol * Math.sqrt(T);
   const baseModel = price * (1 + trendBias * T);
   const bearModel = baseModel * (1 - 1.28 * tVol);
@@ -66,7 +77,8 @@ function calcProjection(
 
   const hasAnalyst =
     !!(analystTargets?.targetMean && analystTargets.targetLow && analystTargets.targetHigh);
-  const analystWeight = hasAnalyst ? Math.min(0.7, (horizon / 12) * 0.7) : 0;
+  // Analyst targets are 12-month consensus — weight scales with horizon
+  const analystWeight = hasAnalyst ? Math.min(0.70, T * 0.70) : 0;
 
   const bear = hasAnalyst
     ? bearModel * (1 - analystWeight) + analystTargets!.targetLow! * analystWeight
@@ -79,14 +91,135 @@ function calcProjection(
     ? bullModel * (1 - analystWeight) + analystTargets!.targetHigh! * analystWeight
     : bullModel;
 
-  // Support / resistance (approximate Fibonacci levels)
+  // Support / resistance (Fibonacci levels on 52-week range)
   const support = Math.max(yearLow, yearLow + yearRange * 0.236);
   const resistance = Math.min(yearHigh, yearLow + yearRange * 0.618);
 
   return { bear, base, bull, support, resistance, annualVol, trendBias };
 }
 
-/* ── Projection data builder (forward only; history comes from API) ── */
+/* ── Probability model ──
+ *
+ * Computes bear / base / bull scenario probabilities by combining five
+ * signals — each weighted differently per horizon:
+ *
+ *  Signal       Short (5D)  Medium (3M)  Long (1Y)
+ *  ─────────────────────────────────────────────────
+ *  Technical      high        mid          low     ← pillar score + 52w position
+ *  Fundamental    low         mid          high    ← pillar score
+ *  Sentiment      high        mid          low     ← news/event sentiment pillar
+ *  Momentum       high        mid          low     ← recent % change
+ *  Analyst        none        mid          high    ← consensus vs current price
+ *
+ * bullBias (−1 → +1) shifts the bull/bear split of the non-base probability.
+ * Base probability rises with horizon (fundamentals take time to assert).
+ * High beta / high riskLevel compress the base, widening the tails.
+ */
+
+type ProbWeights = [number, number, number, number, number]; // [tech, fund, sent, mom, analyst]
+
+const PROB_WEIGHTS: Record<Horizon, ProbWeights> = {
+  5:  [0.42, 0.06, 0.28, 0.20, 0.04],
+  1:  [0.36, 0.14, 0.22, 0.18, 0.10],
+  3:  [0.26, 0.22, 0.18, 0.16, 0.18],
+  6:  [0.18, 0.30, 0.15, 0.12, 0.25],
+  12: [0.10, 0.35, 0.12, 0.08, 0.35],
+};
+
+const BASE_PROB_BY_HORIZON: Record<Horizon, number> = {
+  5: 28, 1: 35, 3: 42, 6: 48, 12: 52,
+};
+
+function calcProbabilities(
+  price: number,
+  beta: number | null | undefined,
+  yearHigh: number,
+  yearLow: number,
+  changePercent: number,
+  analystTargets: AnalystTargets | null,
+  horizon: Horizon,
+  fundPct: number,    // fundamentalsScore.percentage  (0–100)
+  techPct: number,    // technicalScore.percentage      (0–100)
+  sentPct: number,    // sentimentScore.percentage      (0–100)
+  riskLevel: string,
+): { bearProb: number; baseProb: number; bullProb: number } {
+
+  // ── Individual signals (−1..+1 = bearish..bullish) ──
+
+  // Technical: pillar score + 52-week mean-reversion
+  const yearRange = Math.max(yearHigh - yearLow, price * 0.02);
+  const posInRange = Math.min(1, Math.max(0, (price - yearLow) / yearRange));
+  const techPillarSig  = (techPct - 50) / 50;
+  const rangeRevSig    = (0.5 - posInRange);            // near low → bullish
+  const techSignal     = techPillarSig * 0.65 + rangeRevSig * 0.60;
+
+  // Fundamental pillar
+  const fundSignal = (fundPct - 50) / 50;
+
+  // Sentiment / news / upcoming-events pillar
+  const sentSignal = (sentPct - 50) / 50;
+
+  // Momentum: tanh keeps signal bounded regardless of change magnitude
+  const momSignal = Math.tanh(changePercent / 4);
+
+  // Analyst consensus vs current price
+  let analystSignal = 0;
+  if (analystTargets?.targetMean && analystTargets.targetMean > 0) {
+    const upside = (analystTargets.targetMean - price) / price;
+    analystSignal = Math.tanh(upside * 3); // +20% upside → tanh(0.6) ≈ 0.54
+  }
+
+  // ── Weighted combination ──
+  const [wt, wf, ws, wm, wa] = PROB_WEIGHTS[horizon];
+  const rawBias =
+    techSignal    * wt +
+    fundSignal    * wf +
+    sentSignal    * ws +
+    momSignal     * wm +
+    analystSignal * wa;
+
+  // Clamp — prevents extreme signal from dominating completely
+  const bullBias = Math.max(-0.80, Math.min(0.80, rawBias));
+
+  // ── Base probability (how likely is the "middle" scenario) ──
+  let basePct = BASE_PROB_BY_HORIZON[horizon];
+
+  const b = Math.abs(beta ?? 1);
+  if (b > 2.0)      basePct -= 7;
+  else if (b > 1.5) basePct -= 4;
+  else if (b < 0.6) basePct += 4;
+
+  if (riskLevel === "High")     basePct -= 4;
+  else if (riskLevel === "Low") basePct += 3;
+
+  basePct = Math.max(20, Math.min(62, basePct));
+
+  // ── Split remaining between bull and bear ──
+  // bullShare: 0.20 (strong bear) → 0.50 (neutral) → 0.80 (strong bull)
+  const bullShare = 0.50 + bullBias * 0.375;
+  const remaining = 100 - basePct;
+
+  let bullProb = Math.round(remaining * bullShare);
+  let bearProb = remaining - bullProb;
+
+  // Enforce minimums
+  bullProb = Math.max(5, bullProb);
+  bearProb = Math.max(5, bearProb);
+
+  // Renormalise to exactly 100
+  const total = bullProb + bearProb + basePct;
+  const finalBear = Math.round((bearProb / total) * 100);
+  const finalBull = Math.round((bullProb / total) * 100);
+  const finalBase = 100 - finalBear - finalBull;
+
+  return {
+    bearProb: Math.max(5, finalBear),
+    baseProb: Math.max(15, finalBase),
+    bullProb: Math.max(5, finalBull),
+  };
+}
+
+/* ── Forward projection series builder ── */
 
 function getTradingDays(from: Date, count: number, forward: boolean): Date[] {
   const days: Date[] = [];
@@ -156,13 +289,31 @@ export default function PriceProjPanel({
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartInstanceRef = useRef<IChartApi | null>(null);
 
-  const { ticker, price, yearHigh, yearLow, beta, change, overallScore, combinedScore, ratingColor } = result;
+  const {
+    ticker, price, yearHigh, yearLow, beta, change, changePercent,
+    overallScore, combinedScore, ratingColor,
+    fundamentalsScore, technicalScore, sentimentScore, riskLevel,
+  } = result;
   const score = overallScore ?? combinedScore;
 
   const { bear, base, bull, support, resistance, annualVol } =
     calcProjection(price, beta, yearHigh, yearLow, change, score, analystTargets, horizon);
 
-  // Fetch real historical prices (3M covers all horizon starting points)
+  const pillarPct = (p: typeof fundamentalsScore | undefined) =>
+    p && p.maxScore > 0 ? (p.score / p.maxScore) * 100 : 50;
+
+  const fundPct = pillarPct(fundamentalsScore);
+  const techPct = pillarPct(technicalScore);
+  const sentPct = pillarPct(sentimentScore);
+
+  const { bearProb, baseProb, bullProb } = calcProbabilities(
+    price, beta, yearHigh, yearLow, changePercent ?? change,
+    analystTargets, horizon,
+    fundPct, techPct, sentPct,
+    riskLevel ?? "Moderate",
+  );
+
+  // Fetch real historical prices for the chart
   useEffect(() => {
     if (!ticker) return;
     fetch(`/api/chart?ticker=${ticker}&range=3M`)
@@ -191,9 +342,9 @@ export default function PriceProjPanel({
   const horizonLabel = HORIZONS.find((h) => h.value === horizon)?.label ?? "3M";
 
   const scenariosData = [
-    { key: "bear", label: "Bear", price: bear, pct: bearPct, color: "#ef4444", bg: "rgba(239,68,68,0.07)",   border: "rgba(239,68,68,0.16)"  },
-    { key: "base", label: "Base", price: base, pct: basePct, color: "#f59e0b", bg: "rgba(245,158,11,0.07)",  border: "rgba(245,158,11,0.16)" },
-    { key: "bull", label: "Bull", price: bull, pct: bullPct, color: "#4ade80", bg: "rgba(74,222,128,0.07)",  border: "rgba(74,222,128,0.16)" },
+    { key: "bear", label: "Bear", price: bear, pct: bearPct, prob: bearProb, color: "#ef4444", bg: "rgba(239,68,68,0.07)",   border: "rgba(239,68,68,0.16)"  },
+    { key: "base", label: "Base", price: base, pct: basePct, prob: baseProb, color: "#f59e0b", bg: "rgba(245,158,11,0.07)",  border: "rgba(245,158,11,0.16)" },
+    { key: "bull", label: "Bull", price: bull, pct: bullPct, prob: bullProb, color: "#4ade80", bg: "rgba(74,222,128,0.07)",  border: "rgba(74,222,128,0.16)" },
   ];
 
   /* ── Build / rebuild chart ── */
@@ -210,7 +361,6 @@ export default function PriceProjPanel({
       price, horizon, bear, base, bull
     );
 
-    // Build real historical series from API quotes
     const toTs = (dateStr: string) =>
       Math.floor(new Date(dateStr).getTime() / 1000) as UTCTimestamp;
 
@@ -249,7 +399,7 @@ export default function PriceProjPanel({
     });
     chartInstanceRef.current = chart;
 
-    // Bear projection area (red fill shows downside risk)
+    // Bear projection area (red fill = downside risk zone)
     const bearArea = chart.addSeries(AreaSeries, {
       lineColor: "#ef4444",
       topColor: "rgba(239,68,68,0.06)",
@@ -262,7 +412,7 @@ export default function PriceProjPanel({
     });
     bearArea.setData(bearSeries);
 
-    // Bull projection area (green fill shows upside potential)
+    // Bull projection area (green fill = upside potential zone)
     const bullArea = chart.addSeries(AreaSeries, {
       lineColor: "#4ade80",
       topColor: "rgba(74,222,128,0.18)",
@@ -287,7 +437,7 @@ export default function PriceProjPanel({
     });
     baseLine.setData(baseSeries);
 
-    // Historical area (real prices from API — drawn on top of projections)
+    // Historical area (real API data — drawn on top so it's never obscured)
     const areaSeries = chart.addSeries(AreaSeries, {
       lineColor: histColor,
       topColor: histColor + "28",
@@ -301,7 +451,7 @@ export default function PriceProjPanel({
       areaSeries.setData(histSeries);
     }
 
-    // Support horizontal price line — green (price floor)
+    // Support — green dashed line (price floor)
     areaSeries.createPriceLine({
       price: support,
       color: "rgba(74,222,128,0.65)",
@@ -311,7 +461,7 @@ export default function PriceProjPanel({
       title: `S  $${support.toFixed(0)}`,
     });
 
-    // Resistance horizontal price line — red (price ceiling)
+    // Resistance — red dashed line (price ceiling)
     areaSeries.createPriceLine({
       price: resistance,
       color: "rgba(239,68,68,0.65)",
@@ -392,7 +542,7 @@ export default function PriceProjPanel({
         ))}
       </div>
 
-      {/* Scenario Tiles */}
+      {/* Scenario Tiles with Probability */}
       <div className="grid grid-cols-3 gap-2.5">
         {scenariosData.map((s) => (
           <div
@@ -400,8 +550,17 @@ export default function PriceProjPanel({
             className="rounded-xl p-3.5"
             style={{ background: s.bg, border: `1px solid ${s.border}` }}
           >
-            <div className="text-[9px] font-bold uppercase tracking-widest mb-2" style={{ color: s.color }}>
-              {s.label} — {horizonLabel}
+            {/* Label + probability pill */}
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-[9px] font-bold uppercase tracking-widest" style={{ color: s.color }}>
+                {s.label} — {horizonLabel}
+              </div>
+              <div
+                className="text-[10px] font-black font-mono px-1.5 py-0.5 rounded"
+                style={{ background: s.color + "20", color: s.color, border: `1px solid ${s.color}30` }}
+              >
+                {s.prob}%
+              </div>
             </div>
             <div className="text-[17px] font-black font-mono" style={{ color: "var(--text)" }}>
               ${s.price.toFixed(0)}
@@ -410,11 +569,50 @@ export default function PriceProjPanel({
               className="text-[12px] font-bold font-mono mt-0.5"
               style={{ color: s.pct < 0 ? "#ef4444" : "#10b981" }}
             >
-              {s.pct >= 0 ? "+" : ""}
-              {s.pct.toFixed(1)}%
+              {s.pct >= 0 ? "+" : ""}{s.pct.toFixed(1)}%
+            </div>
+            {/* Probability progress bar */}
+            <div className="mt-2.5 pt-2" style={{ borderTop: `1px solid ${s.border}` }}>
+              <div
+                className="h-1 rounded-full"
+                style={{ background: "rgba(255,255,255,0.06)" }}
+              >
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{ width: `${s.prob}%`, background: s.color, opacity: 0.75 }}
+                />
+              </div>
             </div>
           </div>
         ))}
+      </div>
+
+      {/* Stacked probability distribution bar */}
+      <div>
+        <div className="flex justify-between mb-1.5 text-[9px] font-mono" style={{ color: "var(--text-dim)" }}>
+          <span style={{ color: "#ef4444" }}>Bear {bearProb}%</span>
+          <span className="text-[9px] uppercase tracking-wider font-semibold" style={{ color: "var(--text-dim)" }}>
+            Probability Distribution
+          </span>
+          <span style={{ color: "#4ade80" }}>Bull {bullProb}%</span>
+        </div>
+        <div className="flex rounded-full overflow-hidden" style={{ height: 6 }}>
+          <div
+            className="transition-all duration-500"
+            style={{ width: `${bearProb}%`, background: "#ef4444", opacity: 0.70 }}
+          />
+          <div
+            className="transition-all duration-500"
+            style={{ width: `${baseProb}%`, background: "#f59e0b", opacity: 0.70 }}
+          />
+          <div
+            className="transition-all duration-500"
+            style={{ width: `${bullProb}%`, background: "#4ade80", opacity: 0.70 }}
+          />
+        </div>
+        <div className="flex justify-center mt-1 text-[9px] font-mono" style={{ color: "var(--text-dim)" }}>
+          <span style={{ color: "#f59e0b" }}>Base {baseProb}%</span>
+        </div>
       </div>
 
       {/* Range bar with markers */}
@@ -519,11 +717,11 @@ export default function PriceProjPanel({
               <span className="text-[9px]" style={{ color: "var(--text-dim)" }}>Bull</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <div className="w-4 rounded-full" style={{ height: 2, background: "rgba(74,222,128,0.65)", borderTop: "1px dashed rgba(74,222,128,0.65)" }} />
+              <div className="w-4 rounded-full" style={{ height: 2, background: "rgba(74,222,128,0.65)" }} />
               <span className="text-[9px]" style={{ color: "var(--text-dim)" }}>Support</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <div className="w-4 rounded-full" style={{ height: 2, background: "rgba(239,68,68,0.65)", borderTop: "1px dashed rgba(239,68,68,0.65)" }} />
+              <div className="w-4 rounded-full" style={{ height: 2, background: "rgba(239,68,68,0.65)" }} />
               <span className="text-[9px]" style={{ color: "var(--text-dim)" }}>Resistance</span>
             </div>
           </div>
@@ -532,7 +730,7 @@ export default function PriceProjPanel({
         <div ref={chartContainerRef} className="w-full" />
 
         <div className="flex justify-between mt-2 text-[9px] font-mono" style={{ color: "var(--text-dim)" }}>
-          <span>60d ago</span>
+          <span>3M ago</span>
           <span style={{ color: "var(--accent)" }}>▲ Now</span>
           <span>+{horizonLabel}</span>
         </div>
@@ -563,11 +761,17 @@ export default function PriceProjPanel({
         </div>
       </div>
 
-      {/* Methodology note */}
+      {/* Probability factors note */}
       <div className="text-[10px] leading-relaxed" style={{ color: "var(--text-dim)" }}>
-        {hasAnalyst
-          ? `Model blends beta-adjusted volatility (σ≈${(annualVol * 100).toFixed(0)}% annual) with analyst consensus targets. ${horizon < 12 ? "Shorter horizons weight the vol model more heavily." : "1Y horizon applies full analyst blending."}`
-          : `Beta-adjusted volatility model (σ≈${(annualVol * 100).toFixed(0)}% annual). Trend bias derived from 52-week position, momentum, and score. Illustrative only — not investment advice.`
+        {horizon === 5
+          ? `5D probabilities weight technical score (${techPct.toFixed(0)}%), sentiment (${sentPct.toFixed(0)}%), and price momentum most heavily — fundamentals have limited short-term impact.`
+          : horizon <= 1
+          ? `1M probabilities blend technical signals, news sentiment, and recent momentum. Fundamental score: ${fundPct.toFixed(0)}%.${hasAnalyst ? " Analyst targets carry low weight at 1M." : ""}`
+          : horizon <= 3
+          ? `3M probabilities balance technical (${techPct.toFixed(0)}%), fundamental (${fundPct.toFixed(0)}%), sentiment (${sentPct.toFixed(0)}%) and momentum signals equally.${hasAnalyst ? " Analyst consensus blended." : ""}`
+          : horizon <= 6
+          ? `6M probabilities give increasing weight to fundamentals (${fundPct.toFixed(0)}%) and analyst targets over short-term technical signals.${hasAnalyst ? " Analyst blending applied." : ""}`
+          : `1Y probabilities are primarily driven by fundamentals (${fundPct.toFixed(0)}%) and analyst consensus targets, with diminished weight on short-term technicals.${hasAnalyst ? " Full analyst blending applied." : " Vol model only — no analyst targets available."}`
         }
       </div>
     </div>
