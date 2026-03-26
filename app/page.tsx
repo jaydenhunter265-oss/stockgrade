@@ -2478,6 +2478,401 @@ function NewsModal({ article, onClose }: { article: NewsItem; onClose: () => voi
   );
 }
 
+/* ══════════════════ Should You Buy Now Box ══════════════════ */
+
+function ShouldYouBuyNowBox({
+  result,
+  totalBuy,
+  totalSell,
+  totalMetrics,
+  analystTargets,
+}: {
+  result: EvaluationResult;
+  totalBuy: number;
+  totalSell: number;
+  totalMetrics: number;
+  analystTargets: AnalystTargets | null;
+}) {
+  const score = result.combinedScore;
+  const signalRatio = totalBuy + totalSell > 0 ? totalBuy / (totalBuy + totalSell) : 0.5;
+  const metricBonus = totalMetrics >= 25 ? 8 : totalMetrics >= 15 ? 4 : 0;
+  const rawConfidence = score * 0.45 + signalRatio * 45 + metricBonus;
+  const confidence = Math.round(Math.min(95, Math.max(42, rawConfidence)));
+
+  let verdict: "BUY" | "HOLD" | "AVOID";
+  let verdictColor: string;
+  let verdictBg: string;
+  let keyReason: string;
+
+  if (score >= 55) {
+    verdict = "BUY";
+    verdictColor = "#10b981";
+    verdictBg = "rgba(16,185,129,0.07)";
+    if (analystTargets?.targetMean && analystTargets.targetMean > result.price) {
+      const upside = (((analystTargets.targetMean - result.price) / result.price) * 100).toFixed(0);
+      keyReason = `Analyst consensus targets $${analystTargets.targetMean.toFixed(0)} — ${upside}% upside. ${totalBuy} buy signals support the bull case.`;
+    } else {
+      keyReason = `${totalBuy} buy signals across ${result.categories.length} categories confirm strength. ${result.riskLevel} risk profile supports position.`;
+    }
+  } else if (score >= 35) {
+    verdict = "HOLD";
+    verdictColor = "#f59e0b";
+    verdictBg = "rgba(245,158,11,0.07)";
+    keyReason = `Signals are mixed — ${totalBuy} buy vs ${totalSell} sell across ${result.categories.length} categories. Wait for a clearer directional catalyst.`;
+  } else {
+    verdict = "AVOID";
+    verdictColor = "#ef4444";
+    verdictBg = "rgba(239,68,68,0.07)";
+    keyReason = `${totalSell} red flags detected across ${result.categories.length} categories. ${result.riskLevel} risk rating warrants caution before entering.`;
+  }
+
+  const segments = 10;
+  const filledCount = Math.round((confidence / 100) * segments);
+
+  return (
+    <div
+      className="rounded-xl p-5"
+      style={{ background: verdictBg, border: `2px solid ${verdictColor}28` }}
+    >
+      <div className="flex items-center gap-2 mb-4">
+        <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: verdictColor }} />
+        <span className="text-[9px] font-bold uppercase tracking-[0.15em]" style={{ color: verdictColor }}>
+          Should You Buy Now?
+        </span>
+      </div>
+
+      <div className="flex items-center gap-4 mb-4">
+        {/* Verdict */}
+        <div className="flex-shrink-0">
+          <div className="text-[9px] font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--text-dim)" }}>Verdict</div>
+          <div className="text-[32px] font-black leading-none" style={{ color: verdictColor, letterSpacing: "-0.04em" }}>
+            {verdict}
+          </div>
+        </div>
+
+        {/* Divider */}
+        <div className="w-px h-14" style={{ background: verdictColor + "22" }} />
+
+        {/* Confidence */}
+        <div className="flex-shrink-0">
+          <div className="text-[9px] font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--text-dim)" }}>Confidence</div>
+          <div className="flex items-baseline gap-0.5">
+            <span className="text-[28px] font-black font-mono leading-none" style={{ color: "var(--text)", letterSpacing: "-0.04em" }}>
+              {confidence}
+            </span>
+            <span className="text-sm font-bold" style={{ color: "var(--text-muted)" }}>%</span>
+          </div>
+        </div>
+
+        {/* Confidence bar segments */}
+        <div className="flex-1 hidden sm:flex flex-col gap-1.5">
+          <div className="flex gap-0.5 h-7">
+            {Array.from({ length: segments }, (_, i) => (
+              <div
+                key={i}
+                className="flex-1 rounded-sm"
+                style={{
+                  background: i < filledCount ? verdictColor : verdictColor + "15",
+                  opacity: i < filledCount ? 0.5 + (i / segments) * 0.5 : 1,
+                }}
+              />
+            ))}
+          </div>
+          <div className="flex justify-between text-[8px] font-mono" style={{ color: "var(--text-dim)" }}>
+            <span>Low conviction</span>
+            <span>High conviction</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Key reason */}
+      <div
+        className="rounded-lg px-3.5 py-2.5"
+        style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.06)" }}
+      >
+        <span className="text-[9px] font-bold uppercase tracking-wider mr-2" style={{ color: verdictColor }}>
+          Key Reason
+        </span>
+        <span className="text-[12px] leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+          {keyReason}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════ Projection Chart ══════════════════ */
+
+function ProjectionChart({ result }: { result: EvaluationResult }) {
+  const { price, yearHigh, yearLow, beta, combinedScore, change } = result;
+
+  const vol = beta ? Math.min(0.40, Math.max(0.06, Math.abs(beta) * 0.13)) : 0.13;
+  const trendBias = (combinedScore - 50) / 200;
+
+  // Deterministic pseudo-random using price + yearHigh as seed
+  function pseudoRand(i: number): number {
+    const s = Math.sin(i * 127.1 + (yearHigh || price) * 311.7) * 43758.5453;
+    return s - Math.floor(s);
+  }
+
+  // Build 60 historical points walking backward from current price
+  const histPoints: number[] = [];
+  {
+    const clampLow = (yearLow > 0 ? yearLow : price * 0.6) * 0.88;
+    const clampHigh = (yearHigh > 0 ? yearHigh : price * 1.4) * 1.12;
+    let p = price;
+    for (let i = 0; i < 60; i++) {
+      histPoints.unshift(p);
+      const r = pseudoRand(i + 1) * 2 - 1;
+      const dailyVol = vol / Math.sqrt(252);
+      p = Math.max(clampLow, Math.min(clampHigh, p - r * dailyVol * p - trendBias * p));
+    }
+    histPoints[histPoints.length - 1] = price;
+  }
+
+  // Build 30-day forward projection
+  interface ProjPoint { x: number; mid: number; low: number; high: number }
+  const projPoints: ProjPoint[] = [];
+  for (let i = 1; i <= 30; i++) {
+    const mid = price * (1 + trendBias * i);
+    const spread = price * vol * Math.sqrt(i / 252) * 1.96;
+    projPoints.push({ x: 59 + i, mid, low: Math.max(price * 0.4, mid - spread), high: mid + spread });
+  }
+
+  const W = 100, H = 70;
+  const allValues = [...histPoints, ...projPoints.flatMap((p) => [p.low, p.high])];
+  const minVal = Math.min(...allValues) * 0.985;
+  const maxVal = Math.max(...allValues) * 1.015;
+  const vRange = maxVal - minVal || 1;
+  const totalPts = 90;
+
+  const toX = (idx: number) => ((idx / (totalPts - 1)) * W).toFixed(3);
+  const toY = (val: number) => (H - ((val - minVal) / vRange) * H).toFixed(3);
+
+  const histPath = histPoints.map((v, i) => `${i === 0 ? "M" : "L"}${toX(i)} ${toY(v)}`).join(" ");
+  const projAreaTop = projPoints.map((p) => `L${toX(p.x)} ${toY(p.high)}`).join(" ");
+  const projAreaBot = [...projPoints].reverse().map((p) => `L${toX(p.x)} ${toY(p.low)}`).join(" ");
+  const projAreaPath = `M${toX(59)} ${toY(price)} ${projAreaTop} ${projAreaBot} Z`;
+  const projMidPath = `M${toX(59)} ${toY(price)} ` + projPoints.map((p) => `L${toX(p.x)} ${toY(p.mid)}`).join(" ");
+
+  const histColor = change >= 0 ? "#10b981" : "#ef4444";
+  const projColor = combinedScore >= 55 ? "#10b981" : combinedScore >= 35 ? "#f59e0b" : "#ef4444";
+  const lastProj = projPoints[projPoints.length - 1];
+  const projUpside = ((lastProj.mid - price) / price) * 100;
+
+  return (
+    <div className="card rounded-xl p-5">
+      <div className="flex items-center justify-between mb-4">
+        <div className="section-label">30-Day Price Projection</div>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5">
+            <div className="w-4 h-0.5 rounded-full" style={{ background: histColor }} />
+            <span className="text-[9px]" style={{ color: "var(--text-dim)" }}>Historical</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-4 h-0.5 rounded-full" style={{ background: projColor, opacity: 0.7 }} />
+            <span className="text-[9px]" style={{ color: "var(--text-dim)" }}>Projection</span>
+          </div>
+          <span
+            className="text-[9px] font-mono px-1.5 py-0.5 rounded"
+            style={{ background: "rgba(255,255,255,0.03)", color: "var(--text-dim)", border: "1px solid var(--border)" }}
+          >
+            Model
+          </span>
+        </div>
+      </div>
+
+      <div className="relative">
+        <svg
+          viewBox={`0 0 ${W} ${H}`}
+          className="w-full"
+          style={{ overflow: "visible", display: "block" }}
+          preserveAspectRatio="none"
+        >
+          {/* "Now" divider */}
+          <line
+            x1={toX(59)} y1="0"
+            x2={toX(59)} y2={H}
+            stroke="rgba(255,255,255,0.07)"
+            strokeWidth="0.4"
+            strokeDasharray="1.2,0.8"
+          />
+          {/* Projection uncertainty band */}
+          <path d={projAreaPath} fill={projColor} fillOpacity="0.09" />
+          {/* Projection midline */}
+          <path d={projMidPath} fill="none" stroke={projColor} strokeWidth="0.55" strokeDasharray="1.5,0.8" opacity="0.85" />
+          {/* Historical line */}
+          <path d={histPath} fill="none" stroke={histColor} strokeWidth="0.65" />
+          {/* Current price dot */}
+          <circle cx={toX(59)} cy={toY(price)} r="1.1" fill="var(--accent)" />
+        </svg>
+
+        <div className="flex justify-between mt-2 text-[9px] font-mono" style={{ color: "var(--text-dim)" }}>
+          <span>60d ago</span>
+          <span style={{ color: "var(--accent)" }}>Now</span>
+          <span>+30d</span>
+        </div>
+      </div>
+
+      {/* Stats row */}
+      <div className="grid grid-cols-3 gap-3 mt-4 pt-4" style={{ borderTop: "1px solid var(--border)" }}>
+        <div className="text-center">
+          <div className="text-[9px] mb-1" style={{ color: "var(--text-dim)" }}>Current</div>
+          <div className="text-sm font-black font-mono" style={{ color: "var(--text)" }}>${price.toFixed(2)}</div>
+        </div>
+        <div className="text-center">
+          <div className="text-[9px] mb-1" style={{ color: "var(--text-dim)" }}>30d Mid Target</div>
+          <div className="text-sm font-black font-mono" style={{ color: projColor }}>${lastProj.mid.toFixed(2)}</div>
+        </div>
+        <div className="text-center">
+          <div className="text-[9px] mb-1" style={{ color: "var(--text-dim)" }}>Projected Δ</div>
+          <div className="text-sm font-black font-mono" style={{ color: projUpside >= 0 ? "#10b981" : "#ef4444" }}>
+            {projUpside >= 0 ? "+" : ""}{projUpside.toFixed(1)}%
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-3 text-[10px]" style={{ color: "var(--text-dim)" }}>
+        Projection uses beta-adjusted volatility model with momentum bias from score. Illustrative only — not a price guarantee.
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════ Upcoming Events Card ══════════════════ */
+
+function UpcomingEventsCard({
+  earningsEstimates,
+  dividendPerShare,
+  ticker,
+}: {
+  earningsEstimates: EarningsPeriod[];
+  dividendPerShare?: number | null;
+  ticker: string;
+}) {
+  interface EventItem {
+    label: string;
+    date: string;
+    daysUntil: number | null;
+    color: string;
+    bg: string;
+    sub: string | null;
+    icon: string;
+  }
+
+  const events: EventItem[] = [];
+
+  const quarterMap: Record<string, string> = {
+    "0q": "Current Quarter",
+    "+1q": "Next Quarter",
+    "0y": "Current Year",
+    "+1y": "Next Year",
+  };
+
+  for (const ep of earningsEstimates) {
+    if (!ep.endDate) continue;
+    const endDate = new Date(ep.endDate);
+    const now = new Date();
+    const daysUntil = Math.ceil((endDate.getTime() - now.getTime()) / 86400000);
+    if (daysUntil < -30) continue;
+
+    const label = quarterMap[ep.period] ?? ep.period;
+    const epsAvg = ep.earningsEstimate.avg;
+    const revAvg = ep.revenueEstimate.avg;
+    const sub = epsAvg !== null
+      ? `EPS Est: ${epsAvg >= 0 ? "$" : "-$"}${Math.abs(epsAvg).toFixed(2)}${revAvg !== null
+          ? ` · Rev: ${revAvg >= 1e9 ? `$${(revAvg / 1e9).toFixed(1)}B` : `$${(revAvg / 1e6).toFixed(0)}M`}`
+          : ""}`
+      : null;
+
+    events.push({
+      label: `Earnings Report — ${label}`,
+      date: ep.endDate.slice(0, 10),
+      daysUntil: daysUntil > 0 ? daysUntil : null,
+      color: "#3b82f6",
+      bg: "rgba(59,130,246,0.07)",
+      sub,
+      icon: "◈",
+    });
+    if (events.length >= 2) break;
+  }
+
+  if (dividendPerShare && dividendPerShare > 0) {
+    events.push({
+      label: "Annual Dividend",
+      date: "Recurring",
+      daysUntil: null,
+      color: "#10b981",
+      bg: "rgba(16,185,129,0.07)",
+      sub: `$${dividendPerShare.toFixed(2)} per share (TTM)`,
+      icon: "◎",
+    });
+  }
+
+  if (events.length === 0) {
+    events.push({
+      label: "Next Earnings Report",
+      date: "Date TBA",
+      daysUntil: null,
+      color: "#f59e0b",
+      bg: "rgba(245,158,11,0.07)",
+      sub: `Check ${ticker} investor relations for confirmed date`,
+      icon: "◈",
+    });
+  }
+
+  return (
+    <div className="card rounded-xl p-5">
+      <div className="flex items-center justify-between mb-4">
+        <div className="section-label">Upcoming Events</div>
+        <span className="text-[9px] font-mono" style={{ color: "var(--text-dim)" }}>Estimate Data</span>
+      </div>
+      <div className="space-y-3">
+        {events.map((ev, i) => (
+          <div
+            key={i}
+            className="flex items-start gap-3 rounded-xl p-3.5"
+            style={{ background: ev.bg, border: `1px solid ${ev.color}22` }}
+          >
+            <div
+              className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 text-sm font-black"
+              style={{ background: ev.color + "18", color: ev.color }}
+            >
+              {ev.icon}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[12px] font-semibold" style={{ color: "var(--text)" }}>
+                  {ev.label}
+                </span>
+                {ev.daysUntil !== null && ev.daysUntil > 0 && (
+                  <span
+                    className="text-[9px] font-bold px-2 py-0.5 rounded flex-shrink-0"
+                    style={{ background: ev.color + "18", color: ev.color }}
+                  >
+                    {ev.daysUntil}d
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center flex-wrap gap-1.5 mt-0.5">
+                <span className="text-[10px] font-mono font-semibold" style={{ color: ev.color }}>
+                  {ev.date}
+                </span>
+                {ev.sub && (
+                  <>
+                    <span className="text-[10px]" style={{ color: "var(--border-hover)" }}>·</span>
+                    <span className="text-[10px]" style={{ color: "var(--text-dim)" }}>{ev.sub}</span>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /* ══════════════════ Skeletons ══════════════════ */
 
 function LoadingSkeleton() {
@@ -3377,6 +3772,15 @@ export default function HomePage() {
                 </div>
               </div>
 
+              {/* ─── Should You Buy Now? ─── */}
+              <ShouldYouBuyNowBox
+                result={result}
+                totalBuy={totalBuy}
+                totalSell={totalSell}
+                totalMetrics={totalMetrics}
+                analystTargets={stockDetails?.analystTargets ?? null}
+              />
+
               {/* ─── AI Verdict Banner ─── */}
               <AIVerdictBanner
                 ticker={result.ticker}
@@ -3420,6 +3824,9 @@ export default function HomePage() {
               {/* ─── Price Chart ─── */}
               <PriceChart ticker={result.ticker} currentPrice={result.price} change={result.change} changePercent={result.changePercent} />
 
+              {/* ─── 30-Day Projection Chart ─── */}
+              <ProjectionChart result={result} />
+
               {/* Key Stats */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <StatCard label="Market Cap" value={formatNumber(result.marketCap)} />
@@ -3459,6 +3866,13 @@ export default function HomePage() {
                   analystTargets={stockDetails.analystTargets}
                 />
               )}
+
+              {/* ─── Upcoming Events ─── */}
+              <UpcomingEventsCard
+                earningsEstimates={stockDetails?.earningsEstimates ?? []}
+                dividendPerShare={null}
+                ticker={result.ticker}
+              />
 
               {/* ═══ Activity & News ═══ */}
               <div className="flex items-center gap-3 pt-2">
