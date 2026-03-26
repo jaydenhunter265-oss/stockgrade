@@ -4,6 +4,10 @@ import { useState, useRef, useEffect } from "react";
 import type { EvaluationResult, CategoryScore, MetricScore, PillarScore } from "@/lib/types";
 import { formatNumber, cn, timeAgo } from "@/lib/utils";
 import PriceChart from "@/components/price-chart";
+import PriceProjPanel from "@/components/price-projection-panel";
+import ScoreDrivers from "@/components/score-drivers";
+import SentimentNewsSection from "@/components/sentiment-news-section";
+import CollapsibleSection from "@/components/collapsible-section";
 
 /* ══════════════════ Types ══════════════════ */
 
@@ -3814,18 +3818,14 @@ export default function HomePage() {
                 <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
               </div>
 
-              {/* ─── Price Outlook Card ─── */}
-              <PriceOutlookCard
-                currentPrice={result.price}
+              {/* ─── Enhanced Price Outlook + Projection (Features 1,2,3) ─── */}
+              <PriceProjPanel
+                result={result}
                 analystTargets={stockDetails?.analystTargets ?? null}
-                beta={result.beta}
               />
 
               {/* ─── Price Chart ─── */}
               <PriceChart ticker={result.ticker} currentPrice={result.price} change={result.change} changePercent={result.changePercent} />
-
-              {/* ─── 30-Day Projection Chart ─── */}
-              <ProjectionChart result={result} />
 
               {/* Key Stats */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -3839,58 +3839,42 @@ export default function HomePage() {
                 <StatCard label="Prev Close" value={result.previousClose ? "$" + result.previousClose.toFixed(2) : "N/A"} />
               </div>
 
-              {/* ═══ Technical Analysis ═══ */}
-              <div className="flex items-center gap-3 pt-2">
-                <span className="text-[10px] font-semibold uppercase tracking-[0.12em]" style={{ color: "var(--text-dim)" }}>Technical Analysis</span>
-                <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
-              </div>
+              {/* ═══ Technical Analysis (collapsible) ═══ */}
+              <CollapsibleSection title="Technical Analysis">
+                <div className="space-y-5">
+                  <TechnicalIndicators ticker={result.ticker} />
+                  {stockDetails?.analystTargets && (
+                    <AnalystTargetsSection targets={stockDetails.analystTargets} currentPrice={result.price} />
+                  )}
+                  {stockDetails?.esg && <ESGSection esg={stockDetails.esg} />}
+                  {stockDetails && (
+                    <PriceOutlook
+                      earningsEstimates={stockDetails.earningsEstimates ?? []}
+                      recommendationTrends={stockDetails.recommendationTrends ?? []}
+                      ownership={stockDetails.ownership ?? null}
+                      currentPrice={result.price}
+                      analystTargets={stockDetails.analystTargets}
+                    />
+                  )}
+                  <UpcomingEventsCard
+                    earningsEstimates={stockDetails?.earningsEstimates ?? []}
+                    dividendPerShare={null}
+                    ticker={result.ticker}
+                  />
+                </div>
+              </CollapsibleSection>
 
-              {/* ─── Technical Indicators (Alpha Vantage) ─── */}
-              <TechnicalIndicators ticker={result.ticker} />
-
-              {/* ─── Analyst Price Targets ─── */}
-              {stockDetails?.analystTargets && (
-                <AnalystTargetsSection targets={stockDetails.analystTargets} currentPrice={result.price} />
-              )}
-
-              {/* ─── ESG Risk Assessment ─── */}
-              {stockDetails?.esg && <ESGSection esg={stockDetails.esg} />}
-
-              {/* ─── Price Outlook & Research ─── */}
-              {stockDetails && (
-                <PriceOutlook
-                  earningsEstimates={stockDetails.earningsEstimates ?? []}
-                  recommendationTrends={stockDetails.recommendationTrends ?? []}
-                  ownership={stockDetails.ownership ?? null}
-                  currentPrice={result.price}
-                  analystTargets={stockDetails.analystTargets}
-                />
-              )}
-
-              {/* ─── Upcoming Events ─── */}
-              <UpcomingEventsCard
-                earningsEstimates={stockDetails?.earningsEstimates ?? []}
-                dividendPerShare={null}
-                ticker={result.ticker}
-              />
-
-              {/* ═══ Activity & News ═══ */}
-              <div className="flex items-center gap-3 pt-2">
-                <span className="text-[10px] font-semibold uppercase tracking-[0.12em]" style={{ color: "var(--text-dim)" }}>Activity & News</span>
-                <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
-              </div>
-
-              {/* ─── Stock-Specific News ─── */}
-              <StockNewsSection ticker={result.ticker} onSelectArticle={setSelectedNews} />
-
-              {/* ─── Insider Activity + Institutional Holdings ─── */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <InsiderTradingPanel ticker={result.ticker} />
-                <InstitutionalHoldingsPanel ticker={result.ticker} />
-              </div>
-
-              {/* ─── SEC Filings ─── */}
-              <SECFilingsPanel ticker={result.ticker} />
+              {/* ═══ Activity & News (collapsible) ═══ */}
+              <CollapsibleSection title="Activity & News">
+                <div className="space-y-5">
+                  <SentimentNewsSection ticker={result.ticker} onSelectArticle={setSelectedNews} />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <InsiderTradingPanel ticker={result.ticker} />
+                    <InstitutionalHoldingsPanel ticker={result.ticker} />
+                  </div>
+                  <SECFilingsPanel ticker={result.ticker} />
+                </div>
+              </CollapsibleSection>
 
               {/* Description */}
               {result.description && (
@@ -3910,11 +3894,8 @@ export default function HomePage() {
                 </div>
               )}
 
-              {/* ═══ Score Breakdown ═══ */}
-              <div className="flex items-center gap-3 pt-2">
-                <span className="text-[10px] font-semibold uppercase tracking-[0.12em]" style={{ color: "var(--text-dim)" }}>Score Breakdown</span>
-                <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
-              </div>
+              {/* ═══ Score Breakdown (collapsible) ═══ */}
+              <CollapsibleSection title="Full Score Breakdown" badge={`${result.combinedScore}/100`} badgeColor={result.ratingColor}>
 
               {/* Verdict + Scores */}
               <div className="rounded-xl p-5 space-y-4" style={{ background: result.ratingColor + "06", border: `1px solid ${result.ratingColor}18` }}>
@@ -3949,28 +3930,35 @@ export default function HomePage() {
               {/* Score Insights */}
               <ScoreInsightsPanel categories={result.categories} score={result.combinedScore} rating={result.rating} ratingColor={result.ratingColor} />
 
-              {/* Signals */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <SignalCard title="Top Buy Signals" metrics={result.topSignals} color="#10b981" icon="&#9650;" />
-                <SignalCard title="Red Flags" metrics={result.redFlags} color="#ef4444" icon="&#9660;" />
-              </div>
+              {/* Score Drivers — Feature 6 */}
+              <ScoreDrivers categories={result.categories} />
 
-              {/* Categories */}
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <h2 className="text-sm font-bold" style={{ color: "var(--text)" }}>
-                    Detailed Breakdown
-                  </h2>
-                  <span className="text-[10px]" style={{ color: "var(--text-dim)" }}>
-                    Click to expand
-                  </span>
+              {/* Signals + Categories in collapsible */}
+              <CollapsibleSection title="Signals & Detailed Breakdown" badge={`${totalBuy} buy · ${totalSell} sell`}>
+                <div className="space-y-4">
+                  {/* Signals */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <SignalCard title="Top Buy Signals" metrics={result.topSignals} color="#10b981" icon="&#9650;" />
+                    <SignalCard title="Red Flags" metrics={result.redFlags} color="#ef4444" icon="&#9660;" />
+                  </div>
+                  {/* Categories */}
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <h2 className="text-sm font-bold" style={{ color: "var(--text)" }}>
+                        Category Breakdown
+                      </h2>
+                      <span className="text-[10px]" style={{ color: "var(--text-dim)" }}>
+                        Click to expand
+                      </span>
+                    </div>
+                    <div className="space-y-2">
+                      {result.categories.map((cat, i) => (
+                        <CategoryBar key={i} category={cat} index={i} />
+                      ))}
+                    </div>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  {result.categories.map((cat, i) => (
-                    <CategoryBar key={i} category={cat} index={i} />
-                  ))}
-                </div>
-              </div>
+              </CollapsibleSection>
 
               {/* Scale */}
               <div className="rounded-xl p-4" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
@@ -3998,6 +3986,8 @@ export default function HomePage() {
                   ))}
                 </div>
               </div>
+
+              </CollapsibleSection>
 
               {/* Disclaimer */}
               <p className="text-[11px] leading-relaxed px-1" style={{ color: "var(--text-dim)" }}>
