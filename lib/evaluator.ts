@@ -724,7 +724,11 @@ function evaluateRiskVolatility(d: YahooData): MetricScore[] {
   ];
 }
 
-/* ─── Main Evaluator ─── */\n\nimport { trackEvaluation } from './performance';\n\nexport async function evaluateStock(ticker: string, _apiKey?: string): Promise<EvaluationResult> {
+/* ─── Main Evaluator ─── */
+
+import { trackEvaluation } from './performance.server';
+
+export async function evaluateStock(ticker: string, _apiKey?: string): Promise<EvaluationResult> {
   const symbol = ticker.toUpperCase().trim();
 
   const d = await fetchYahooData(symbol);
@@ -890,7 +894,9 @@ function evaluateRiskVolatility(d: YahooData): MetricScore[] {
     }
   }
 
-  const now = new Date().toISOString();\n\n  const result = {
+  const now = new Date().toISOString();
+
+  const result = {
     ticker: symbol,
     companyName: d.companyName,
     sector: d.sector,
@@ -932,4 +938,11 @@ function evaluateRiskVolatility(d: YahooData): MetricScore[] {
     categories,
     topSignals,
     redFlags,
-    evaluatedAt: now,\n  };\n\n  // Track for historical performance\n  trackEvaluation(result).catch(console.error);\n\n  return result;\n}
+    evaluatedAt: now,
+  };
+
+  // Track for historical performance
+  trackEvaluation(result).catch(console.error);
+
+  return result;
+}
