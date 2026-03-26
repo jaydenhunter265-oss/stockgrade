@@ -13,6 +13,11 @@ import {
 } from "lightweight-charts";
 import type { EvaluationResult } from "@/lib/types";
 
+interface ChartQuote {
+  date: string;
+  close: number;
+}
+
 /* ── Types ── */
 
 interface AnalystTargets {
@@ -81,96 +86,51 @@ function calcProjection(
   return { bear, base, bull, support, resistance, annualVol, trendBias };
 }
 
-/* ── Chart data builder ── */
+/* ── Projection data builder (forward only; history comes from API) ── */
 
-function buildChartData(
+function getTradingDays(from: Date, count: number, forward: boolean): Date[] {
+  const days: Date[] = [];
+  const cursor = new Date(from);
+  while (days.length < count) {
+    cursor.setDate(cursor.getDate() + (forward ? 1 : -1));
+    const dow = cursor.getDay();
+    if (dow !== 0 && dow !== 6) days.push(new Date(cursor));
+  }
+  return forward ? days : days.reverse();
+}
+
+function buildProjectionSeries(
   price: number,
-  beta: number | null | undefined,
-  yearHigh: number,
-  yearLow: number,
-  change: number,
-  score: number,
   horizon: Horizon,
   finalBear: number,
   finalBase: number,
   finalBull: number,
 ): {
-  histSeries: SeriesPoint[];
   baseSeries: SeriesPoint[];
   bearSeries: SeriesPoint[];
   bullSeries: SeriesPoint[];
 } {
-  const annualVol = Math.min(0.65, Math.max(0.08, Math.abs(beta ?? 1) * 0.16 + 0.05));
-  const yearRange = Math.max(yearHigh - yearLow, price * 0.02);
-  const posInRange = Math.min(1, Math.max(0, (price - yearLow) / yearRange));
-  const trendBias =
-    (posInRange - 0.5) * 0.12 +
-    (change >= 0 ? 0.015 : -0.015) +
-    ((score - 50) / 100) * 0.10;
-  const dailyVol = annualVol / Math.sqrt(252);
-  const clampLow = (yearLow > 0 ? yearLow : price * 0.6) * 0.88;
-  const clampHigh = (yearHigh > 0 ? yearHigh : price * 1.4) * 1.12;
-
-  function pseudoRand(i: number): number {
-    const s = Math.sin(i * 127.1 + (yearHigh || price) * 311.7) * 43758.5453;
-    return s - Math.floor(s);
-  }
-
-  // Generate trading days (skip weekends)
-  function getTradingDays(from: Date, count: number, forward: boolean): Date[] {
-    const days: Date[] = [];
-    const cursor = new Date(from);
-    while (days.length < count) {
-      cursor.setDate(cursor.getDate() + (forward ? 1 : -1));
-      const dow = cursor.getDay();
-      if (dow !== 0 && dow !== 6) days.push(new Date(cursor));
-    }
-    return forward ? days : days.reverse();
-  }
-
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-
-  const histDaysCount = 60;
-  const { tradingDays: fwdDays } = HORIZONS.find((h) => h.value === horizon)!;
-
-  const historicalDates = getTradingDays(today, histDaysCount, false);
-  const forwardDates = getTradingDays(today, fwdDays, true);
-
-  // Pseudo-random backward walk from current price to build historical simulation
-  const rawHistPrices: number[] = [];
-  let p = price;
-  for (let i = 0; i < histDaysCount; i++) {
-    rawHistPrices.unshift(p);
-    const r = pseudoRand(i + 1) * 2 - 1;
-    p = Math.max(clampLow, Math.min(clampHigh, p - r * dailyVol * p - trendBias * p));
-  }
-
   const toTs = (d: Date) => Math.floor(d.getTime() / 1000) as UTCTimestamp;
   const todayTs = toTs(today);
 
-  // Historical area series (ends at today = current price)
-  const histSeries: SeriesPoint[] = historicalDates.map((d, i) => ({
-    time: toTs(d),
-    value: rawHistPrices[i],
-  }));
-  histSeries.push({ time: todayTs, value: price });
+  const { tradingDays: fwdDays } = HORIZONS.find((h) => h.value === horizon)!;
+  const forwardDates = getTradingDays(today, fwdDays, true);
 
-  // Projection series: interpolate linearly to the final blended scenario prices
-  // so the chart endpoints exactly match the scenario tiles
   const baseSeries: SeriesPoint[] = [{ time: todayTs, value: price }];
   const bearSeries: SeriesPoint[] = [{ time: todayTs, value: price }];
   const bullSeries: SeriesPoint[] = [{ time: todayTs, value: price }];
 
   for (let i = 0; i < forwardDates.length; i++) {
-    const t = (i + 1) / fwdDays; // 0 → 1
+    const t = (i + 1) / fwdDays;
     const ts = toTs(forwardDates[i]);
     baseSeries.push({ time: ts, value: price + (finalBase - price) * t });
     bearSeries.push({ time: ts, value: price + (finalBear - price) * t });
     bullSeries.push({ time: ts, value: price + (finalBull - price) * t });
   }
 
-  return { histSeries, baseSeries, bearSeries, bullSeries };
+  return { baseSeries, bearSeries, bullSeries };
 }
 
 /* ── Volatility label ── */
@@ -192,14 +152,24 @@ export default function PriceProjPanel({
   analystTargets: AnalystTargets | null;
 }) {
   const [horizon, setHorizon] = useState<Horizon>(3);
+  const [histQuotes, setHistQuotes] = useState<ChartQuote[]>([]);
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartInstanceRef = useRef<IChartApi | null>(null);
 
-  const { price, yearHigh, yearLow, beta, change, overallScore, combinedScore, ratingColor } = result;
+  const { ticker, price, yearHigh, yearLow, beta, change, overallScore, combinedScore, ratingColor } = result;
   const score = overallScore ?? combinedScore;
 
   const { bear, base, bull, support, resistance, annualVol } =
     calcProjection(price, beta, yearHigh, yearLow, change, score, analystTargets, horizon);
+
+  // Fetch real historical prices (3M covers all horizon starting points)
+  useEffect(() => {
+    if (!ticker) return;
+    fetch(`/api/chart?ticker=${ticker}&range=3M`)
+      .then((r) => r.json())
+      .then((d) => setHistQuotes(d.quotes ?? []))
+      .catch(() => setHistQuotes([]));
+  }, [ticker]);
 
   const hasAnalyst = !!(analystTargets?.targetMean);
   const vLabel = volLabel(annualVol);
@@ -236,13 +206,22 @@ export default function PriceProjPanel({
     }
 
     const el = chartContainerRef.current;
-    const { histSeries, baseSeries, bearSeries, bullSeries } = buildChartData(
-      price, beta, yearHigh, yearLow, change, score, horizon, bear, base, bull
+    const { baseSeries, bearSeries, bullSeries } = buildProjectionSeries(
+      price, horizon, bear, base, bull
     );
+
+    // Build real historical series from API quotes
+    const toTs = (dateStr: string) =>
+      Math.floor(new Date(dateStr).getTime() / 1000) as UTCTimestamp;
+
+    const histSeries: SeriesPoint[] = histQuotes.map((q) => ({
+      time: toTs(q.date),
+      value: q.close,
+    }));
 
     const chart = createChart(el, {
       width: el.clientWidth,
-      height: 240,
+      height: 260,
       layout: {
         background: { type: ColorType.Solid, color: "transparent" },
         textColor: "rgba(255,255,255,0.3)",
@@ -270,7 +249,45 @@ export default function PriceProjPanel({
     });
     chartInstanceRef.current = chart;
 
-    // Historical area (past 60 trading days simulated from current price)
+    // Bear projection area (red fill shows downside risk)
+    const bearArea = chart.addSeries(AreaSeries, {
+      lineColor: "#ef4444",
+      topColor: "rgba(239,68,68,0.06)",
+      bottomColor: "rgba(239,68,68,0.18)",
+      lineWidth: 1,
+      priceScaleId: "right",
+      priceLineVisible: false,
+      lastValueVisible: true,
+      crosshairMarkerVisible: true,
+    });
+    bearArea.setData(bearSeries);
+
+    // Bull projection area (green fill shows upside potential)
+    const bullArea = chart.addSeries(AreaSeries, {
+      lineColor: "#4ade80",
+      topColor: "rgba(74,222,128,0.18)",
+      bottomColor: "rgba(74,222,128,0.03)",
+      lineWidth: 1,
+      priceScaleId: "right",
+      priceLineVisible: false,
+      lastValueVisible: true,
+      crosshairMarkerVisible: true,
+    });
+    bullArea.setData(bullSeries);
+
+    // Base projection line (thicker, dominant)
+    const baseLine = chart.addSeries(LineSeries, {
+      color: projColor,
+      lineWidth: 2,
+      lineStyle: LineStyle.LargeDashed,
+      priceScaleId: "right",
+      priceLineVisible: false,
+      lastValueVisible: true,
+      crosshairMarkerVisible: true,
+    });
+    baseLine.setData(baseSeries);
+
+    // Historical area (real prices from API — drawn on top of projections)
     const areaSeries = chart.addSeries(AreaSeries, {
       lineColor: histColor,
       topColor: histColor + "28",
@@ -280,60 +297,29 @@ export default function PriceProjPanel({
       priceLineVisible: false,
       lastValueVisible: false,
     });
-    areaSeries.setData(histSeries);
+    if (histSeries.length > 0) {
+      areaSeries.setData(histSeries);
+    }
 
-    // Support horizontal price line
+    // Support horizontal price line — green (price floor)
     areaSeries.createPriceLine({
       price: support,
-      color: "rgba(239,68,68,0.55)",
+      color: "rgba(74,222,128,0.65)",
       lineWidth: 1,
       lineStyle: LineStyle.Dashed,
       axisLabelVisible: true,
       title: `S  $${support.toFixed(0)}`,
     });
 
-    // Resistance horizontal price line
+    // Resistance horizontal price line — red (price ceiling)
     areaSeries.createPriceLine({
       price: resistance,
-      color: "rgba(74,222,128,0.55)",
+      color: "rgba(239,68,68,0.65)",
       lineWidth: 1,
       lineStyle: LineStyle.Dashed,
       axisLabelVisible: true,
       title: `R  $${resistance.toFixed(0)}`,
     });
-
-    // Bear projection line
-    const bearLine = chart.addSeries(LineSeries, {
-      color: "#ef4444",
-      lineWidth: 1,
-      lineStyle: LineStyle.LargeDashed,
-      priceLineVisible: false,
-      lastValueVisible: true,
-      crosshairMarkerVisible: true,
-    });
-    bearLine.setData(bearSeries);
-
-    // Base projection line (thicker, dominant)
-    const baseLine = chart.addSeries(LineSeries, {
-      color: projColor,
-      lineWidth: 2,
-      lineStyle: LineStyle.LargeDashed,
-      priceLineVisible: false,
-      lastValueVisible: true,
-      crosshairMarkerVisible: true,
-    });
-    baseLine.setData(baseSeries);
-
-    // Bull projection line
-    const bullLine = chart.addSeries(LineSeries, {
-      color: "#4ade80",
-      lineWidth: 1,
-      lineStyle: LineStyle.LargeDashed,
-      priceLineVisible: false,
-      lastValueVisible: true,
-      crosshairMarkerVisible: true,
-    });
-    bullLine.setData(bullSeries);
 
     chart.timeScale().fitContent();
 
@@ -352,7 +338,7 @@ export default function PriceProjPanel({
       }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [price, beta, yearHigh, yearLow, change, score, horizon, bear, base, bull, support, resistance]);
+  }, [histQuotes, price, horizon, bear, base, bull, support, resistance, histColor, projColor]);
 
   return (
     <div className="card rounded-xl p-5 space-y-5">
@@ -478,9 +464,9 @@ export default function PriceProjPanel({
       <div className="grid grid-cols-2 gap-2 pt-1">
         <div
           className="rounded-lg p-3 text-center"
-          style={{ background: "rgba(239,68,68,0.05)", border: "1px solid rgba(239,68,68,0.12)" }}
+          style={{ background: "rgba(74,222,128,0.05)", border: "1px solid rgba(74,222,128,0.12)" }}
         >
-          <div className="text-[9px] font-bold uppercase tracking-widest mb-1" style={{ color: "#ef4444" }}>
+          <div className="text-[9px] font-bold uppercase tracking-widest mb-1" style={{ color: "#4ade80" }}>
             Est. Support
           </div>
           <div className="text-[15px] font-black font-mono" style={{ color: "var(--text)" }}>
@@ -492,9 +478,9 @@ export default function PriceProjPanel({
         </div>
         <div
           className="rounded-lg p-3 text-center"
-          style={{ background: "rgba(74,222,128,0.05)", border: "1px solid rgba(74,222,128,0.12)" }}
+          style={{ background: "rgba(239,68,68,0.05)", border: "1px solid rgba(239,68,68,0.12)" }}
         >
-          <div className="text-[9px] font-bold uppercase tracking-widest mb-1" style={{ color: "#4ade80" }}>
+          <div className="text-[9px] font-bold uppercase tracking-widest mb-1" style={{ color: "#ef4444" }}>
             Est. Resistance
           </div>
           <div className="text-[15px] font-black font-mono" style={{ color: "var(--text)" }}>
@@ -533,8 +519,12 @@ export default function PriceProjPanel({
               <span className="text-[9px]" style={{ color: "var(--text-dim)" }}>Bull</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <div className="w-4 rounded-full" style={{ height: 2, background: "rgba(239,68,68,0.55)", borderTop: "1px dashed rgba(239,68,68,0.55)" }} />
-              <span className="text-[9px]" style={{ color: "var(--text-dim)" }}>Support / Resist</span>
+              <div className="w-4 rounded-full" style={{ height: 2, background: "rgba(74,222,128,0.65)", borderTop: "1px dashed rgba(74,222,128,0.65)" }} />
+              <span className="text-[9px]" style={{ color: "var(--text-dim)" }}>Support</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-4 rounded-full" style={{ height: 2, background: "rgba(239,68,68,0.65)", borderTop: "1px dashed rgba(239,68,68,0.65)" }} />
+              <span className="text-[9px]" style={{ color: "var(--text-dim)" }}>Resistance</span>
             </div>
           </div>
         </div>
