@@ -233,6 +233,51 @@ export interface PillarScore {
   bullets: ScoreBullet[];
 }
 
+export interface AiRatingWhenUp {
+  minDays: number;
+  maxDays: number;
+  earliestDate: string;
+  latestDate: string;
+  windowLabel: string;
+}
+
+export interface AiRatingWhenNotUp {
+  expected: "not_likely_within_120_days";
+  reevaluateAfterDays: number;
+}
+
+export interface AiRating {
+  score: number;
+  label:
+    | "very_bullish"
+    | "bullish"
+    | "slightly_bullish"
+    | "neutral_to_bearish"
+    | "bearish";
+  willGoUp: boolean;
+  upProbability: number;
+  horizonDays: number;
+  when: AiRatingWhenUp | AiRatingWhenNotUp;
+}
+
+export interface MirofishGraphSignal {
+  available: boolean;
+  bullEvidence?: number;
+  bearEvidence?: number;
+  sentimentScore?: number;
+  reason?: string;
+}
+
+export interface MirofishMeta {
+  enabled: boolean;
+  backendReachable: boolean;
+  graphIdConfigured: boolean;
+  note: string;
+  simulatedSignal: "bullish" | "neutral" | "bearish";
+  scoreAdjustment: number;
+  graphSignal: MirofishGraphSignal;
+}
+
 export interface EvaluationResult {
   ticker: string;
   companyName: string;
@@ -278,5 +323,7 @@ export interface EvaluationResult {
   categories: CategoryScore[];
   topSignals: MetricScore[];
   redFlags: MetricScore[];
+  aiRating: AiRating;
+  mirofish: MirofishMeta;
   evaluatedAt: string;
 }

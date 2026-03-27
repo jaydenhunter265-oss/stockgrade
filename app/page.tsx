@@ -1083,6 +1083,49 @@ function PillarScoreCard({ pillar }: { pillar: PillarScore }) {
   );
 }
 
+function MirofishRatingCard({ result }: { result: EvaluationResult }) {
+  const ai = result.aiRating;
+  const mf = result.mirofish;
+  const cardColor = ai.score >= 78 ? "#10b981" : ai.score >= 58 ? "#f59e0b" : "#ef4444";
+  const label = ai.label.replace(/_/g, " ");
+  const whenText = "earliestDate" in ai.when
+    ? `${ai.when.earliestDate} to ${ai.when.latestDate}`
+    : "Not likely within 120 days";
+
+  return (
+    <div className="card rounded-xl p-5">
+      <div className="flex items-start justify-between gap-3 mb-4">
+        <div>
+          <div className="section-label">MiroFish AI Rating</div>
+          <div className="text-[11px] mt-1" style={{ color: "var(--text-dim)" }}>
+            Predicts if and when price is likely to move up.
+          </div>
+        </div>
+        <div
+          className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded"
+          style={{ background: cardColor + "14", color: cardColor, border: `1px solid ${cardColor}30` }}
+        >
+          {label}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
+        <StatCard label="AI Rating" value={`${ai.score.toFixed(1)}/100`} />
+        <StatCard label="Up Probability" value={`${(ai.upProbability * 100).toFixed(1)}%`} />
+        <StatCard label="Will Go Up?" value={ai.willGoUp ? "Yes" : "No"} />
+        <StatCard label="When" value={whenText} />
+      </div>
+
+      <div className="text-[11px] leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+        {mf.note}
+      </div>
+      <div className="text-[10px] mt-1.5" style={{ color: "var(--text-dim)" }}>
+        Backend: {mf.backendReachable ? "reachable" : "unreachable"} | Graph ID: {mf.graphIdConfigured ? "configured" : "not configured"} | Adjustment: {mf.scoreAdjustment >= 0 ? "+" : ""}{mf.scoreAdjustment}
+      </div>
+    </div>
+  );
+}
+
 function FourPillarBreakdown({ result }: { result: EvaluationResult }) {
   const pillars = [result.fundamentalsScore, result.technicalScore, result.sentimentScore, result.riskScore];
   const overallColor = result.overallScore >= 70 ? "#10b981" : result.overallScore >= 45 ? "#f59e0b" : "#ef4444";
@@ -3856,6 +3899,8 @@ export default function HomePage() {
               />
 
               {/* ── Price Outlook ── */}
+              <MirofishRatingCard result={result} />
+
               <PriceProjPanel
                 result={result}
                 analystTargets={stockDetails?.analystTargets ?? null}

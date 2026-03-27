@@ -6,6 +6,7 @@ import type {
   ScoreBullet,
 } from "./types";
 import { getRatingFromScore } from "./utils";
+import { getMirofishPrediction } from "./mirofish";
 import YahooFinance from "yahoo-finance2";
 
 // yahoo-finance2 v3 requires instantiation
@@ -895,6 +896,16 @@ export async function evaluateStock(ticker: string, _apiKey?: string): Promise<E
   }
 
   const now = new Date().toISOString();
+  const { aiRating, mirofish } = await getMirofishPrediction({
+    ticker: symbol,
+    combinedScore,
+    qualityScore,
+    growthScore,
+    valueScore,
+    technicalPillarScore: technicalScorePillar.score,
+    sentimentPillarScore: sentimentScorePillar.score,
+    riskPillarScore: riskScorePillar.score,
+  });
 
   const result = {
     ticker: symbol,
@@ -938,6 +949,8 @@ export async function evaluateStock(ticker: string, _apiKey?: string): Promise<E
     categories,
     topSignals,
     redFlags,
+    aiRating,
+    mirofish,
     evaluatedAt: now,
   };
 
