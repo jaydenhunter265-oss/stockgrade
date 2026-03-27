@@ -28,7 +28,11 @@ export async function GET(request: NextRequest) {
   try {
     const cached = await withTimeout(getCachedEvaluation(symbol), 5000);
     if (cached?.metrics) {
-      return NextResponse.json(cached.metrics);
+      const metrics = cached.metrics as Record<string, unknown>;
+      const hasMirofishFields = Boolean(metrics.aiRating) && Boolean(metrics.mirofish);
+      if (hasMirofishFields) {
+        return NextResponse.json(cached.metrics);
+      }
     }
   } catch {
     // Cache miss or error, proceed with fresh evaluation

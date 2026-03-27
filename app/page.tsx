@@ -1084,6 +1084,10 @@ function PillarScoreCard({ pillar }: { pillar: PillarScore }) {
 }
 
 function MirofishRatingCard({ result }: { result: EvaluationResult }) {
+  if (!result.aiRating || !result.mirofish) {
+    return null;
+  }
+
   const ai = result.aiRating;
   const mf = result.mirofish;
   const cardColor = ai.score >= 78 ? "#10b981" : ai.score >= 58 ? "#f59e0b" : "#ef4444";
