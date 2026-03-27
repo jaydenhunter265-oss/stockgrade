@@ -8,6 +8,7 @@ import PriceProjPanel from "@/components/price-projection-panel";
 import ScoreDrivers from "@/components/score-drivers";
 import SentimentNewsSection from "@/components/sentiment-news-section";
 import CollapsibleSection from "@/components/collapsible-section";
+import HybridForecast from "@/components/hybrid-forecast";
 
 /* ══════════════════ Types ══════════════════ */
 
@@ -3856,6 +3857,12 @@ export default function HomePage() {
 
               {/* ── Price Outlook ── */}
               <PriceProjPanel
+                result={result}
+                analystTargets={stockDetails?.analystTargets ?? null}
+              />
+
+              {/* ── Hybrid Forecast ── */}
+              <HybridForecast
                 result={result}
                 analystTargets={stockDetails?.analystTargets ?? null}
               />
