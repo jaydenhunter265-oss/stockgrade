@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import { Tomorrow } from "next/font/google";
+import { Lato } from "next/font/google";
 import "./globals.css";
 
-const tomorrow = Tomorrow({
+const lato = Lato({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800", "900"],
+  weight: ["100", "300", "400", "700", "900"],
   variable: "--font-sans",
   display: "swap",
 });
@@ -16,8 +16,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={tomorrow.variable}>
-      <body style={{ fontFamily: "var(--font-sans), Tomorrow, system-ui, sans-serif" }}>{children}</body>
+    <html lang="en" className={lato.variable}>
+      <body style={{ fontFamily: "var(--font-sans), Lato, system-ui, sans-serif" }}>{children}</body>
     </html>
   );
 }
