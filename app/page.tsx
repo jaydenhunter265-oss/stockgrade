@@ -3030,6 +3030,79 @@ function NewsCard({ article, onClick }: { article: NewsItem; onClick: () => void
   );
 }
 
+/* ══════════════════ Key Metrics Strip ══════════════════ */
+
+function KeyMetricsStrip({
+  result,
+  stockDetails,
+}: {
+  result: EvaluationResult;
+  stockDetails: StockDetails | null;
+}) {
+  const nextEarningsDate =
+    stockDetails?.earningsEstimates?.find(
+      (e) => e.endDate && new Date(e.endDate) > new Date()
+    )?.endDate ?? null;
+
+  const analystTarget = stockDetails?.analystTargets?.targetMean ?? null;
+  const upside =
+    analystTarget !== null
+      ? ((analystTarget - result.price) / result.price) * 100
+      : null;
+
+  type Metric = { label: string; value: string; valueColor?: string };
+  const metrics: Metric[] = [
+    { label: "Market Cap", value: formatNumber(result.marketCap) },
+    { label: "P/E Ratio", value: result.pe ? result.pe.toFixed(1) : "N/A" },
+    { label: "EPS (TTM)", value: result.eps ? `$${result.eps.toFixed(2)}` : "N/A" },
+    { label: "Beta", value: result.beta ? result.beta.toFixed(2) : "N/A" },
+  ];
+
+  if (nextEarningsDate) {
+    metrics.push({ label: "Next Earnings", value: nextEarningsDate.slice(0, 7) });
+  }
+
+  if (analystTarget !== null && upside !== null) {
+    metrics.push({
+      label: "Analyst Target",
+      value: `$${analystTarget.toFixed(0)} (${upside >= 0 ? "+" : ""}${upside.toFixed(0)}%)`,
+      valueColor: upside >= 0 ? "#10b981" : "#ef4444",
+    });
+  }
+
+  const cols =
+    metrics.length <= 4
+      ? "grid-cols-2 sm:grid-cols-4"
+      : metrics.length === 5
+        ? "grid-cols-3 sm:grid-cols-5"
+        : "grid-cols-3 sm:grid-cols-6";
+
+  return (
+    <div className={`grid gap-2.5 ${cols}`}>
+      {metrics.map((m) => (
+        <div
+          key={m.label}
+          className="rounded-xl p-3.5 transition-all duration-150"
+          style={{ background: "var(--card)", border: "1px solid var(--border)" }}
+        >
+          <div
+            className="text-[9px] font-semibold uppercase tracking-[0.1em] mb-1.5"
+            style={{ color: "var(--text-muted)" }}
+          >
+            {m.label}
+          </div>
+          <div
+            className="text-[13px] font-semibold font-mono leading-none"
+            style={{ color: m.valueColor ?? "var(--text)", letterSpacing: "-0.01em" }}
+          >
+            {m.value}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /* ══════════════════ Main Page ══════════════════ */
 
 export default function HomePage() {
@@ -3468,7 +3541,7 @@ export default function HomePage() {
                 <div className="w-2 h-2 rounded-full" style={{ background: "#3b82f6" }} />
                 <h2 className="text-sm font-bold" style={{ color: "var(--text)" }}>Our Picks vs The Market</h2>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div className="text-center">
                   <div className="text-2xl font-black font-mono" style={{ color: "var(--accent)" }}>350+</div>
                   <div className="text-[10px] font-medium mt-1" style={{ color: "var(--text-dim)" }}>Metrics Analyzed</div>
@@ -3476,10 +3549,6 @@ export default function HomePage() {
                 <div className="text-center">
                   <div className="text-2xl font-black font-mono" style={{ color: "#10b981" }}>9</div>
                   <div className="text-[10px] font-medium mt-1" style={{ color: "var(--text-dim)" }}>Score Categories</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-black font-mono" style={{ color: "#3b82f6" }}>20</div>
-                  <div className="text-[10px] font-medium mt-1" style={{ color: "var(--text-dim)" }}>Stocks Tracked</div>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-black font-mono" style={{ color: "#a78bfa" }}>4</div>
@@ -3689,20 +3758,15 @@ export default function HomePage() {
                     </div>
                   </div>
 
-                  {/* Score panel — desktop right, mobile bottom */}
-                  <div className="flex-shrink-0 hidden sm:flex flex-col items-center gap-2 w-48">
-                    <FourScorePanel
-                      qualityScore={result.qualityScore}
-                      growthScore={result.growthScore}
-                      valueScore={result.valueScore}
-                      combinedScore={result.combinedScore}
-                      ratingColor={result.ratingColor}
-                    />
-                    <div className="flex items-center gap-3 mt-1">
-                      <span className="text-[10px] font-semibold" style={{ color: "var(--green)" }}>{totalBuy} buy</span>
-                      <span className="text-[10px]" style={{ color: "var(--border-hover)" }}>·</span>
-                      <span className="text-[10px] font-semibold" style={{ color: "var(--red)" }}>{totalSell} sell</span>
-                    </div>
+                  {/* Combined Score badge */}
+                  <div
+                    className="flex-shrink-0 flex flex-col items-center justify-center w-16 h-16 rounded-2xl"
+                    style={{ background: result.ratingColor + "12", border: `2px solid ${result.ratingColor}30` }}
+                  >
+                    <span className="text-[26px] font-black font-mono leading-none" style={{ color: result.ratingColor, letterSpacing: "-0.04em" }}>
+                      {result.combinedScore}
+                    </span>
+                    <span className="text-[9px] font-bold opacity-50 mt-0.5" style={{ color: result.ratingColor }}>/100</span>
                   </div>
                 </div>
 
@@ -3731,23 +3795,11 @@ export default function HomePage() {
                   {result.yearHigh > 0 && <RangeBar low={result.yearLow} high={result.yearHigh} current={result.price} label="52 Week" />}
                 </div>
 
-                {/* Mobile score panel */}
-                <div className="flex sm:hidden flex-col gap-2 pt-3" style={{ borderTop: "1px solid var(--border)" }}>
-                  <FourScorePanel
-                    qualityScore={result.qualityScore}
-                    growthScore={result.growthScore}
-                    valueScore={result.valueScore}
-                    combinedScore={result.combinedScore}
-                    ratingColor={result.ratingColor}
-                    compact
-                  />
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px]" style={{ color: "var(--text-dim)" }}>{totalMetrics} metrics</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[11px] font-semibold" style={{ color: "var(--green)" }}>{totalBuy} buy</span>
-                      <span className="text-[11px] font-semibold" style={{ color: "var(--red)" }}>{totalSell} sell</span>
-                    </div>
-                  </div>
+                {/* Mobile signal counts */}
+                <div className="flex sm:hidden items-center gap-3 pt-3" style={{ borderTop: "1px solid var(--border)" }}>
+                  <span className="text-[10px]" style={{ color: "var(--text-dim)" }}>{totalMetrics} metrics</span>
+                  <span className="text-[10px] font-semibold" style={{ color: "var(--green)" }}>{totalBuy} buy</span>
+                  <span className="text-[10px] font-semibold" style={{ color: "var(--red)" }}>{totalSell} sell</span>
                 </div>
 
                 {/* Footer: metrics count + share */}
@@ -3776,7 +3828,7 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {/* ─── Should You Buy Now? ─── */}
+              {/* ── Decision Hero ── */}
               <ShouldYouBuyNowBox
                 result={result}
                 totalBuy={totalBuy}
@@ -3785,7 +3837,10 @@ export default function HomePage() {
                 analystTargets={stockDetails?.analystTargets ?? null}
               />
 
-              {/* ─── AI Verdict Banner ─── */}
+              {/* ── Key Metrics Strip ── */}
+              <KeyMetricsStrip result={result} stockDetails={stockDetails} />
+
+              {/* ── AI Summary ── */}
               <AIVerdictBanner
                 ticker={result.ticker}
                 score={result.combinedScore}
@@ -3799,47 +3854,16 @@ export default function HomePage() {
                 rating={result.rating}
               />
 
-              {/* ─── Timestamps ─── */}
-              <TimestampBadge result={result} />
-
-              {/* ─── 4-Pillar Score Breakdown ─── */}
-              {result.fundamentalsScore && (
-                <FourPillarBreakdown result={result} />
-              )}
-
-              {/* ─── Risk & Bear Case ─── */}
-              {result.bearCase && result.bearCase.length > 0 && (
-                <RiskBearCaseSection result={result} />
-              )}
-
-              {/* ═══ Market Data ═══ */}
-              <div className="flex items-center gap-3 pt-2">
-                <span className="text-[10px] font-semibold uppercase tracking-[0.12em]" style={{ color: "var(--text-dim)" }}>Market Data</span>
-                <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
-              </div>
-
-              {/* ─── Enhanced Price Outlook + Projection (Features 1,2,3) ─── */}
+              {/* ── Price Outlook ── */}
               <PriceProjPanel
                 result={result}
                 analystTargets={stockDetails?.analystTargets ?? null}
               />
 
-              {/* ─── Price Chart ─── */}
+              {/* ── Price Chart ── */}
               <PriceChart ticker={result.ticker} currentPrice={result.price} change={result.change} changePercent={result.changePercent} />
 
-              {/* Key Stats */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <StatCard label="Market Cap" value={formatNumber(result.marketCap)} />
-                <StatCard label="P/E Ratio" value={result.pe ? result.pe.toFixed(2) : "N/A"} />
-                <StatCard label="EPS" value={result.eps ? "$" + result.eps.toFixed(2) : "N/A"} />
-                <StatCard label="Beta" value={result.beta ? result.beta.toFixed(2) : "N/A"} sub="Volatility" />
-                <StatCard label="Volume" value={formatNumber(result.volume)} sub="Today" />
-                <StatCard label="Avg Volume" value={formatNumber(result.avgVolume)} />
-                <StatCard label="Open" value={result.open ? "$" + result.open.toFixed(2) : "N/A"} />
-                <StatCard label="Prev Close" value={result.previousClose ? "$" + result.previousClose.toFixed(2) : "N/A"} />
-              </div>
-
-              {/* ═══ Technical Analysis (collapsible) ═══ */}
+              {/* ── Technical Analysis (collapsible) ── */}
               <CollapsibleSection title="Technical Analysis">
                 <div className="space-y-5">
                   <TechnicalIndicators ticker={result.ticker} />
@@ -3864,7 +3888,29 @@ export default function HomePage() {
                 </div>
               </CollapsibleSection>
 
-              {/* ═══ Activity & News (collapsible) ═══ */}
+              {/* ── Financial Details (collapsible) ── */}
+              <CollapsibleSection title="Financial Details">
+                <div className="space-y-5">
+                  {result.fundamentalsScore && (
+                    <FourPillarBreakdown result={result} />
+                  )}
+                  {result.bearCase && result.bearCase.length > 0 && (
+                    <RiskBearCaseSection result={result} />
+                  )}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <StatCard label="Market Cap" value={formatNumber(result.marketCap)} />
+                    <StatCard label="P/E Ratio" value={result.pe ? result.pe.toFixed(2) : "N/A"} />
+                    <StatCard label="EPS" value={result.eps ? "$" + result.eps.toFixed(2) : "N/A"} />
+                    <StatCard label="Beta" value={result.beta ? result.beta.toFixed(2) : "N/A"} sub="Volatility" />
+                    <StatCard label="Volume" value={formatNumber(result.volume)} sub="Today" />
+                    <StatCard label="Avg Volume" value={formatNumber(result.avgVolume)} />
+                    <StatCard label="Open" value={result.open ? "$" + result.open.toFixed(2) : "N/A"} />
+                    <StatCard label="Prev Close" value={result.previousClose ? "$" + result.previousClose.toFixed(2) : "N/A"} />
+                  </div>
+                </div>
+              </CollapsibleSection>
+
+              {/* ── Activity & News (collapsible) ── */}
               <CollapsibleSection title="Activity & News">
                 <div className="space-y-5">
                   <SentimentNewsSection ticker={result.ticker} onSelectArticle={setSelectedNews} />
@@ -3876,25 +3922,26 @@ export default function HomePage() {
                 </div>
               </CollapsibleSection>
 
-              {/* Description */}
+              {/* ── About (collapsible) ── */}
               {result.description && (
-                <div className="card rounded-xl p-5">
-                  <h3 className="section-label mb-2">About {result.companyName}</h3>
-                  <p
-                    className={cn("text-[13px] leading-relaxed transition-all", !descExpanded && "line-clamp-3")}
-                    style={{ color: "var(--text-secondary)" }}
-                  >
-                    {result.description}
-                  </p>
-                  {result.description.length > 200 && (
-                    <button onClick={() => setDescExpanded(!descExpanded)} className="text-[12px] font-semibold mt-1.5 cursor-pointer" style={{ color: "var(--accent)" }}>
-                      {descExpanded ? "Show less" : "Read more"}
-                    </button>
-                  )}
-                </div>
+                <CollapsibleSection title={`About ${result.companyName}`}>
+                  <div className="card rounded-xl p-5">
+                    <p
+                      className={cn("text-[13px] leading-relaxed transition-all", !descExpanded && "line-clamp-3")}
+                      style={{ color: "var(--text-secondary)" }}
+                    >
+                      {result.description}
+                    </p>
+                    {result.description.length > 200 && (
+                      <button onClick={() => setDescExpanded(!descExpanded)} className="text-[12px] font-semibold mt-1.5 cursor-pointer" style={{ color: "var(--accent)" }}>
+                        {descExpanded ? "Show less" : "Read more"}
+                      </button>
+                    )}
+                  </div>
+                </CollapsibleSection>
               )}
 
-              {/* ═══ Score Breakdown (collapsible) ═══ */}
+              {/* ── Full Score Breakdown (collapsible) ── */}
               <CollapsibleSection title="Full Score Breakdown" badge={`${result.combinedScore}/100`} badgeColor={result.ratingColor}>
 
               {/* Verdict + Scores */}
@@ -3930,18 +3977,16 @@ export default function HomePage() {
               {/* Score Insights */}
               <ScoreInsightsPanel categories={result.categories} score={result.combinedScore} rating={result.rating} ratingColor={result.ratingColor} />
 
-              {/* Score Drivers — Feature 6 */}
+              {/* Score Drivers */}
               <ScoreDrivers categories={result.categories} />
 
               {/* Signals + Categories in collapsible */}
               <CollapsibleSection title="Signals & Detailed Breakdown" badge={`${totalBuy} buy · ${totalSell} sell`}>
                 <div className="space-y-4">
-                  {/* Signals */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <SignalCard title="Top Buy Signals" metrics={result.topSignals} color="#10b981" icon="&#9650;" />
                     <SignalCard title="Red Flags" metrics={result.redFlags} color="#ef4444" icon="&#9660;" />
                   </div>
-                  {/* Categories */}
                   <div>
                     <div className="flex items-center justify-between mb-3">
                       <h2 className="text-sm font-bold" style={{ color: "var(--text)" }}>
@@ -3988,6 +4033,9 @@ export default function HomePage() {
               </div>
 
               </CollapsibleSection>
+
+              {/* Timestamps */}
+              <TimestampBadge result={result} />
 
               {/* Disclaimer */}
               <p className="text-[11px] leading-relaxed px-1" style={{ color: "var(--text-dim)" }}>
