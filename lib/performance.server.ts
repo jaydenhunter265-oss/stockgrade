@@ -1,22 +1,55 @@
-// Server-only performance module — uses fs, never import from client components
-import fs from 'fs/promises';
-import path from 'path';
+// Server-only performance module — Supabase-backed, works on Vercel
+import { supabase } from './supabase';
 import type { PerformanceData, PerformanceEntry, TrackedStock } from './performance';
 
-const DATA_FILE = path.join(process.cwd(), 'data', 'performance.json');
-
 export async function readPerformanceData(): Promise<PerformanceData> {
-  try {
-    const raw = await fs.readFile(DATA_FILE, 'utf-8');
-    return JSON.parse(raw);
-  } catch {
-    return { trackedStocks: {}, lastUpdated: new Date().toISOString() };
-  }
-}
+  if (!supabase) return { trackedStocks: {}, lastUpdated: '' };
 
-async function writePerformanceData(data: PerformanceData) {
-  await fs.mkdir(path.dirname(DATA_FILE), { recursive: true });
-  await fs.writeFile(DATA_FILE, JSON.stringify(data, null, 2), 'utf-8');
+  try {
+    // Fetch all tracked evaluations, ordered by date
+    const { data: evals, error } = await supabase
+      .from('performance_tracking')
+      .select('*')
+      .order('evaluated_at', { ascending: true });
+
+    if (error || !evals) return { trackedStocks: {}, lastUpdated: '' };
+
+    const trackedStocks: Record<string, TrackedStock> = {};
+
+    for (const row of evals) {
+      const ticker = row.ticker;
+      if (!trackedStocks[ticker]) {
+        trackedStocks[ticker] = {
+          ticker,
+          companyName: row.company_name || ticker,
+          firstTracked: row.evaluated_at,
+          entries: [],
+          picks: [],
+        };
+      }
+
+      const entry: PerformanceEntry = {
+        date: row.evaluated_at,
+        price: row.price,
+        score: row.score,
+        rating: row.rating,
+      };
+
+      trackedStocks[ticker].entries.push(entry);
+
+      if (row.is_pick) {
+        trackedStocks[ticker].picks.push({ ...entry });
+      }
+    }
+
+    const lastUpdated = evals.length > 0
+      ? evals[evals.length - 1].evaluated_at
+      : new Date().toISOString();
+
+    return { trackedStocks, lastUpdated };
+  } catch {
+    return { trackedStocks: {}, lastUpdated: '' };
+  }
 }
 
 export async function trackEvaluation(result: {
@@ -27,44 +60,39 @@ export async function trackEvaluation(result: {
   price: number;
   evaluatedAt: string;
 }) {
+  if (!supabase) return;
+
   try {
-    const data = await readPerformanceData();
+    const isPick = result.rating === 'STRONG BUY' || result.rating === 'BUY';
 
-    const entry: PerformanceEntry = {
-      date: result.evaluatedAt,
-      price: result.price,
-      score: result.overallScore,
+    // Check for duplicate pick within 7 days
+    let isPickInsert = false;
+    if (isPick) {
+      const sevenDaysAgo = new Date(
+        new Date(result.evaluatedAt).getTime() - 7 * 86400000
+      ).toISOString();
+
+      const { data: recentPicks } = await supabase
+        .from('performance_tracking')
+        .select('id')
+        .eq('ticker', result.ticker)
+        .eq('is_pick', true)
+        .gte('evaluated_at', sevenDaysAgo)
+        .limit(1);
+
+      isPickInsert = !recentPicks || recentPicks.length === 0;
+    }
+
+    await supabase.from('performance_tracking').insert({
+      ticker: result.ticker,
+      company_name: result.companyName,
       rating: result.rating,
-    };
-
-    if (!data.trackedStocks[result.ticker]) {
-      data.trackedStocks[result.ticker] = {
-        ticker: result.ticker,
-        companyName: result.companyName,
-        firstTracked: result.evaluatedAt,
-        entries: [],
-        picks: [],
-      } satisfies TrackedStock;
-    }
-
-    const stock = data.trackedStocks[result.ticker];
-    stock.entries.push(entry);
-    if (stock.entries.length > 90) stock.entries = stock.entries.slice(-90);
-
-    if (result.rating === 'STRONG BUY' || result.rating === 'BUY') {
-      const alreadyPicked = stock.picks.some(
-        (p) =>
-          Math.abs(
-            new Date(p.date).getTime() - new Date(result.evaluatedAt).getTime()
-          ) <
-          7 * 86400000
-      );
-      if (!alreadyPicked) stock.picks.push({ ...entry });
-    }
-
-    data.lastUpdated = new Date().toISOString();
-    await writePerformanceData(data);
+      score: result.overallScore,
+      price: result.price,
+      evaluated_at: result.evaluatedAt,
+      is_pick: isPickInsert,
+    });
   } catch {
-    // Non-critical
+    // Non-critical — don't break evaluation flow
   }
 }

@@ -186,6 +186,93 @@ function RangeBar({ low, high, current, label }: { low: number; high: number; cu
   );
 }
 
+/* ══════════════════ Performance Preview ══════════════════ */
+
+function PerformancePreview() {
+  const [stats, setStats] = useState<{ totalPicks: number; trackedStocks: number; winRate: number; topPick: { ticker: string; pnlPct?: number } | null } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/performance/summary")
+      .then((r) => r.json())
+      .then(setStats)
+      .catch(() => {});
+  }, []);
+
+  const hasPicks = stats && stats.totalPicks > 0;
+
+  return (
+    <div className="w-full max-w-[900px] mx-auto px-4 sm:px-6 pb-10">
+      <div className="rounded-xl p-6" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-2.5">
+            <div className="w-2 h-2 rounded-full" style={{ background: "#3b82f6" }} />
+            <h2 className="text-sm font-bold" style={{ color: "var(--text)" }}>
+              {hasPicks ? "Our Track Record" : "Our Picks vs The Market"}
+            </h2>
+          </div>
+          {hasPicks && (
+            <a
+              href="/performance"
+              className="text-[10px] font-bold px-2.5 py-1 rounded transition-all hover:brightness-110"
+              style={{ background: "rgba(59,130,246,0.08)", color: "#3b82f6", border: "1px solid rgba(59,130,246,0.15)" }}
+            >
+              View All →
+            </a>
+          )}
+        </div>
+
+        <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
+          {hasPicks ? (
+            <>
+              <div className="text-center">
+                <div className="text-2xl font-black font-mono" style={{ color: "var(--accent)" }}>{stats.totalPicks}</div>
+                <div className="text-[10px] font-medium mt-1" style={{ color: "var(--text-dim)" }}>Rated Picks</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-black font-mono" style={{ color: "#10b981" }}>{stats.trackedStocks}</div>
+                <div className="text-[10px] font-medium mt-1" style={{ color: "var(--text-dim)" }}>Tracked Stocks</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-black font-mono" style={{ color: stats.winRate >= 50 ? "#10b981" : "#f59e0b" }}>{stats.winRate}%</div>
+                <div className="text-[10px] font-medium mt-1" style={{ color: "var(--text-dim)" }}>Win Rate</div>
+              </div>
+              {stats.topPick?.pnlPct !== undefined && (
+                <div className="text-center hidden sm:block">
+                  <div className="text-2xl font-black font-mono" style={{ color: stats.topPick.pnlPct >= 0 ? "#10b981" : "#ef4444" }}>
+                    {stats.topPick.pnlPct >= 0 ? "+" : ""}{stats.topPick.pnlPct.toFixed(1)}%
+                  </div>
+                  <div className="text-[10px] font-medium mt-1" style={{ color: "var(--text-dim)" }}>Best Pick ({stats.topPick.ticker})</div>
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              <div className="text-center">
+                <div className="text-2xl font-black font-mono" style={{ color: "var(--accent)" }}>350+</div>
+                <div className="text-[10px] font-medium mt-1" style={{ color: "var(--text-dim)" }}>Metrics Analyzed</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-black font-mono" style={{ color: "#10b981" }}>9</div>
+                <div className="text-[10px] font-medium mt-1" style={{ color: "var(--text-dim)" }}>Score Categories</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-black font-mono" style={{ color: "#a78bfa" }}>4</div>
+                <div className="text-[10px] font-medium mt-1" style={{ color: "var(--text-dim)" }}>Pillar Scores</div>
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="mt-5 pt-4 text-center" style={{ borderTop: "1px solid var(--border)" }}>
+          <p className="text-[12px]" style={{ color: "var(--text-muted)" }}>
+            Each stock is graded on Fundamentals (40pts), Technicals (30pts), Sentiment (20pts), and Risk (10pts) for a transparent 100-point score.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ══════════════════ Analyst Targets Section ══════════════════ */
 
 function AnalystTargetsSection({ targets, currentPrice }: { targets: AnalystTargets; currentPrice: number }) {
@@ -3441,6 +3528,13 @@ export default function HomePage() {
                 <span>Home</span>
               </button>
             )}
+            <a
+              href="/performance"
+              className="text-[11px] font-semibold px-3 py-1.5 rounded transition-colors hover:brightness-110 hidden sm:block"
+              style={{ color: "#3b82f6", background: "rgba(59,130,246,0.08)", border: "1px solid rgba(59,130,246,0.15)" }}
+            >
+              Performance
+            </a>
             <div
               className="text-[9px] font-semibold px-2 py-1 rounded tracking-[0.1em] hidden sm:block"
               style={{ background: "var(--accent-dim)", color: "var(--accent)", border: "1px solid var(--accent-border)" }}
@@ -3685,33 +3779,7 @@ export default function HomePage() {
           </div>
 
           {/* ═══════ Performance Preview ═══════ */}
-          <div className="w-full max-w-[900px] mx-auto px-4 sm:px-6 pb-10">
-            <div className="rounded-xl p-6" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
-              <div className="flex items-center gap-2.5 mb-5">
-                <div className="w-2 h-2 rounded-full" style={{ background: "#3b82f6" }} />
-                <h2 className="text-sm font-bold" style={{ color: "var(--text)" }}>Our Picks vs The Market</h2>
-              </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="text-center">
-                  <div className="text-2xl font-black font-mono" style={{ color: "var(--accent)" }}>350+</div>
-                  <div className="text-[10px] font-medium mt-1" style={{ color: "var(--text-dim)" }}>Metrics Analyzed</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-black font-mono" style={{ color: "#10b981" }}>9</div>
-                  <div className="text-[10px] font-medium mt-1" style={{ color: "var(--text-dim)" }}>Score Categories</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-black font-mono" style={{ color: "#a78bfa" }}>4</div>
-                  <div className="text-[10px] font-medium mt-1" style={{ color: "var(--text-dim)" }}>Pillar Scores</div>
-                </div>
-              </div>
-              <div className="mt-5 pt-4 text-center" style={{ borderTop: "1px solid var(--border)" }}>
-                <p className="text-[12px]" style={{ color: "var(--text-muted)" }}>
-                  Each stock is graded on Fundamentals (40pts), Technicals (30pts), Sentiment (20pts), and Risk (10pts) for a transparent 100-point score.
-                </p>
-              </div>
-            </div>
-          </div>
+          <PerformancePreview />
 
           {/* ═══════ Market Movers ═══════ */}
           {!topStocksLoading && <MarketPulseStrip topStocks={topStocks} onEvaluate={handleEvaluateDirect} />}
@@ -4350,6 +4418,7 @@ export default function HomePage() {
               <h4 className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: "var(--text-dim)" }}>Resources</h4>
               <div className="space-y-2">
                 <a href="/methodology" className="block text-[12px] transition-colors hover:text-white" style={{ color: "var(--text-muted)" }}>Methodology</a>
+                <a href="/performance" className="block text-[12px] transition-colors hover:text-white" style={{ color: "var(--text-muted)" }}>Performance Tracker</a>
                 <button onClick={() => { setTicker("AAPL"); handleEvaluateDirect("AAPL"); }} className="block text-[12px] transition-colors hover:text-white cursor-pointer" style={{ color: "var(--text-muted)", background: "none", border: "none", padding: 0 }}>Example Analysis</button>
               </div>
             </div>
