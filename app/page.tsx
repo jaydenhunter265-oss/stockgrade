@@ -3529,6 +3529,13 @@ export default function HomePage() {
               </button>
             )}
             <a
+              href="/simulate"
+              className="text-[11px] font-semibold px-3 py-1.5 rounded transition-colors hover:brightness-110 hidden sm:block"
+              style={{ color: "var(--accent)", background: "rgba(0,191,165,0.08)", border: "1px solid rgba(0,191,165,0.2)" }}
+            >
+              Simulate
+            </a>
+            <a
               href="/performance"
               className="text-[11px] font-semibold px-3 py-1.5 rounded transition-colors hover:brightness-110 hidden sm:block"
               style={{ color: "#3b82f6", background: "rgba(59,130,246,0.08)", border: "1px solid rgba(59,130,246,0.15)" }}
