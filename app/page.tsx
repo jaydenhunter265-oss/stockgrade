@@ -1101,7 +1101,7 @@ function MirofishRatingCard({ result }: { result: EvaluationResult }) {
     <div className="card rounded-xl p-5">
       <div className="flex items-start justify-between gap-3 mb-4">
         <div>
-          <div className="section-label">MiroFish AI Rating</div>
+          <div className="section-label">AI Momentum Rating</div>
           <div className="text-[11px] mt-1" style={{ color: "var(--text-dim)" }}>
             Predicts if and when price is likely to move up.
           </div>
@@ -1121,12 +1121,6 @@ function MirofishRatingCard({ result }: { result: EvaluationResult }) {
         <StatCard label="When" value={whenText} />
       </div>
 
-      <div className="text-[11px] leading-relaxed" style={{ color: "var(--text-secondary)" }}>
-        {mf.note}
-      </div>
-      <div className="text-[10px] mt-1.5" style={{ color: "var(--text-dim)" }}>
-        Backend: {mf.backendReachable ? "reachable" : "unreachable"} | Graph ID: {mf.graphIdConfigured ? "configured" : "not configured"} | Adjustment: {mf.scoreAdjustment >= 0 ? "+" : ""}{mf.scoreAdjustment}
-      </div>
     </div>
   );
 }
@@ -2928,23 +2922,36 @@ function UpcomingEventsCard({
 
 /* ══════════════════ Skeletons ══════════════════ */
 
-function LoadingSkeleton() {
+function LoadingSkeleton({ ticker }: { ticker?: string }) {
   return (
     <div className="w-full max-w-[1180px] mx-auto mt-8 px-4 sm:px-6 animate-fade-in">
+      {ticker && (
+        <div className="flex items-center gap-4 mb-8">
+          <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin flex-shrink-0"
+            style={{ borderColor: "var(--accent)", borderTopColor: "transparent" }} />
+          <div>
+            <div className="text-[13px] font-semibold" style={{ color: "var(--text)" }}>
+              Analyzing <span className="font-mono" style={{ color: "var(--accent)" }}>{ticker}</span>
+            </div>
+            <div className="text-[11px] mt-0.5" style={{ color: "var(--text-dim)" }}>
+              Fetching fundamentals, technicals, and sentiment data…
+            </div>
+          </div>
+        </div>
+      )}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-8 space-y-5">
           <div className="shimmer rounded-xl h-64" />
-          <div className="shimmer rounded-xl h-80" />
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-              <div key={i} className="shimmer rounded-xl h-20" />
+          <div className="shimmer rounded-xl h-20" />
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="shimmer rounded-xl h-16" />
             ))}
           </div>
-          <div className="shimmer rounded-xl h-48" />
-          <div className="shimmer rounded-xl h-32" />
-          <div className="shimmer rounded-xl h-48" />
-          <div className="shimmer rounded-xl h-40" />
+          <div className="shimmer rounded-xl h-16" />
           <div className="shimmer rounded-xl h-56" />
+          <div className="shimmer rounded-xl h-72" />
+          <div className="shimmer rounded-xl h-48" />
         </div>
         <div className="lg:col-span-4 space-y-5">
           <div className="shimmer rounded-xl h-56" />
@@ -3447,7 +3454,7 @@ export default function HomePage() {
                 {popular.map((t) => (
                   <button
                     key={t}
-                    onClick={() => setTicker(t)}
+                    onClick={() => { setTicker(t); handleEvaluateDirect(t); }}
                     className="px-3.5 py-1.5 text-[12px] font-mono font-semibold cursor-pointer ticker-btn"
                     style={{ background: "var(--card)", border: "1px solid var(--border)", color: "var(--text-secondary)", borderRadius: "6px" }}
                   >
@@ -3756,7 +3763,7 @@ export default function HomePage() {
       )}
 
       {/* ═══════ Loading ═══════ */}
-      {loading && <LoadingSkeleton />}
+      {loading && <LoadingSkeleton ticker={ticker || undefined} />}
 
       {/* ══════════════════ Results ══════════════════ */}
       {result && !loading && (
@@ -3903,14 +3910,6 @@ export default function HomePage() {
                 rating={result.rating}
               />
 
-              {/* ── Price Outlook ── */}
-              <MirofishRatingCard result={result} />
-
-              <PriceProjPanel
-                result={result}
-                analystTargets={stockDetails?.analystTargets ?? null}
-              />
-
               {/* ── Hybrid Forecast ── */}
               <HybridForecast
                 result={result}
@@ -3927,6 +3926,17 @@ export default function HomePage() {
 
               {/* ── Price Chart ── */}
               <PriceChart ticker={result.ticker} currentPrice={result.price} change={result.change} changePercent={result.changePercent} />
+
+              {/* ── Price Projections (collapsible) ── */}
+              <CollapsibleSection title="Price Projections">
+                <div className="space-y-5">
+                  <MirofishRatingCard result={result} />
+                  <PriceProjPanel
+                    result={result}
+                    analystTargets={stockDetails?.analystTargets ?? null}
+                  />
+                </div>
+              </CollapsibleSection>
 
               {/* ── Technical Analysis (collapsible) ── */}
               <CollapsibleSection title="Technical Analysis">
@@ -3963,10 +3973,6 @@ export default function HomePage() {
                     <RiskBearCaseSection result={result} />
                   )}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <StatCard label="Market Cap" value={formatNumber(result.marketCap)} />
-                    <StatCard label="P/E Ratio" value={result.pe ? result.pe.toFixed(2) : "N/A"} />
-                    <StatCard label="EPS" value={result.eps ? "$" + result.eps.toFixed(2) : "N/A"} />
-                    <StatCard label="Beta" value={result.beta ? result.beta.toFixed(2) : "N/A"} sub="Volatility" />
                     <StatCard label="Volume" value={formatNumber(result.volume)} sub="Today" />
                     <StatCard label="Avg Volume" value={formatNumber(result.avgVolume)} />
                     <StatCard label="Open" value={result.open ? "$" + result.open.toFixed(2) : "N/A"} />
