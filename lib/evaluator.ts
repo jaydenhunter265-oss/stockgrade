@@ -55,7 +55,6 @@ interface YahooData {
   country: string;
   description: string;
   companyName: string;
-  website: string;
 
   // Price
   price: number;
@@ -237,7 +236,6 @@ async function fetchYahooData(symbol: string): Promise<YahooData> {
     country: profile.country || "",
     description: profile.longBusinessSummary || "",
     companyName: priceData.longName || priceData.shortName || symbol,
-    website: profile.website || "",
 
     price: priceData.regularMarketPrice || detail.previousClose || 0,
     change: priceData.regularMarketChange || 0,
@@ -885,16 +883,8 @@ export async function evaluateStock(ticker: string, _apiKey?: string): Promise<E
   if (vs52High != null && vs52High < -0.30) bearCase.push(`Stock is ${Math.abs(vs52High * 100).toFixed(0)}% below its 52-week high — sustained downtrend.`);
   if (bearCase.length === 0) bearCase.push("No significant red flags identified at this time.");
 
-  // Get company logo from website domain
-  let image = "";
-  if (d.website) {
-    try {
-      const domain = new URL(d.website).hostname.replace("www.", "");
-      image = `https://logo.clearbit.com/${domain}`;
-    } catch {
-      // ignore
-    }
-  }
+  // FMP CDN provides reliable stock logos by ticker symbol — no domain lookup needed
+  const image = `https://financialmodelingprep.com/image-stock/${symbol}.png`;
 
   const now = new Date().toISOString();
   const { aiRating, mirofish } = await getMirofishPrediction({
