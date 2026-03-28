@@ -278,6 +278,66 @@ export interface MirofishMeta {
   graphSignal: MirofishGraphSignal;
 }
 
+/* ─── Multi-Agent Forecast System ─── */
+
+export interface TrendAgentOutput {
+  trend_direction: "bullish" | "bearish" | "neutral";
+  trend_strength: number;      // 0–1
+  explanation: string;
+}
+
+export interface FundamentalsAgentOutput {
+  fundamental_score: number;   // 0–1
+  valuation_label: "undervalued" | "fair" | "overvalued";
+  explanation: string;
+}
+
+export interface SentimentAgentOutput {
+  sentiment: "bullish" | "neutral" | "bearish";
+  sentiment_score: number;     // 0–1
+  explanation: string;
+}
+
+export interface RiskAgentOutput {
+  risk_level: "low" | "medium" | "high";
+  volatility_score: number;    // 0–1
+  downside_risk_pct: number;   // e.g. 18.5 = 18.5%
+  explanation: string;
+}
+
+export interface MacroAgentOutput {
+  macro_bias: "bullish" | "neutral" | "bearish";
+  macro_score: number;         // 0–1
+  explanation: string;
+}
+
+export interface ForecastScenario {
+  label: "Strong Bull" | "Moderate Bull" | "Neutral" | "Bearish" | "Extreme Bearish";
+  priceTarget: number;
+  returnPct: number;           // e.g. 25.4 = +25.4%
+  probability: number;         // 0–100, all 5 scenarios sum to 100
+  description: string;
+}
+
+export interface AgentForecastOutput {
+  agents: {
+    trend: TrendAgentOutput;
+    fundamentals: FundamentalsAgentOutput;
+    sentiment: SentimentAgentOutput;
+    risk: RiskAgentOutput;
+    macro: MacroAgentOutput;
+  };
+  composite_score: number;     // 0–1 weighted consensus
+  composite_label: "very_bullish" | "bullish" | "neutral" | "bearish" | "very_bearish";
+  bear_case: number;           // price
+  base_case: number;           // price
+  bull_case: number;           // price
+  confidence: number;          // 0–100
+  annual_volatility: number;   // e.g. 0.25 = 25%
+  scenarios: ForecastScenario[];
+  explanation: string;
+}
+
 export interface EvaluationResult {
   ticker: string;
   companyName: string;
@@ -325,5 +385,6 @@ export interface EvaluationResult {
   redFlags: MetricScore[];
   aiRating: AiRating;
   mirofish: MirofishMeta;
+  agentForecast: AgentForecastOutput;
   evaluatedAt: string;
 }

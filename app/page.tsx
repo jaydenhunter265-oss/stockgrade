@@ -9,6 +9,7 @@ import ScoreDrivers from "@/components/score-drivers";
 import SentimentNewsSection from "@/components/sentiment-news-section";
 import CollapsibleSection from "@/components/collapsible-section";
 import HybridForecast from "@/components/hybrid-forecast";
+import AgentForecast from "@/components/agent-forecast";
 
 /* ══════════════════ Types ══════════════════ */
 
@@ -3915,6 +3916,14 @@ export default function HomePage() {
                 result={result}
                 analystTargets={stockDetails?.analystTargets ?? null}
               />
+
+              {/* ── Multi-Agent Forecast ── */}
+              {result.agentForecast && (
+                <AgentForecast
+                  forecast={result.agentForecast}
+                  currentPrice={result.price}
+                />
+              )}
 
               {/* ── Price Chart ── */}
               <PriceChart ticker={result.ticker} currentPrice={result.price} change={result.change} changePercent={result.changePercent} />

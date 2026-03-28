@@ -7,6 +7,7 @@ import type {
 } from "./types";
 import { getRatingFromScore } from "./utils";
 import { getMirofishPrediction } from "./mirofish";
+import { computeAgentForecast } from "./agent-forecast";
 import YahooFinance from "yahoo-finance2";
 
 // yahoo-finance2 v3 requires instantiation
@@ -907,6 +908,18 @@ export async function evaluateStock(ticker: string, _apiKey?: string): Promise<E
     riskPillarScore: riskScorePillar.score,
   });
 
+  const agentForecast = computeAgentForecast({
+    technicalScore: technicalScorePillar,
+    fundamentalsScore,
+    sentimentScore: sentimentScorePillar,
+    riskScore: riskScorePillar,
+    valueScore,
+    combinedScore,
+    sector: d.sector,
+    beta: d.beta ?? 1,
+    price: d.price,
+  });
+
   const result = {
     ticker: symbol,
     companyName: d.companyName,
@@ -951,6 +964,7 @@ export async function evaluateStock(ticker: string, _apiKey?: string): Promise<E
     redFlags,
     aiRating,
     mirofish,
+    agentForecast,
     evaluatedAt: now,
   };
 
