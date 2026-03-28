@@ -1089,38 +1089,132 @@ function MirofishRatingCard({ result }: { result: EvaluationResult }) {
     return null;
   }
 
-  const ai = result.aiRating;
-  const mf = result.mirofish;
+  const ai  = result.aiRating;
+  const sim = result.mirofish.simulation;
   const cardColor = ai.score >= 78 ? "#10b981" : ai.score >= 58 ? "#f59e0b" : "#ef4444";
   const label = ai.label.replace(/_/g, " ");
   const whenText = "earliestDate" in ai.when
-    ? `${ai.when.earliestDate} to ${ai.when.latestDate}`
+    ? `${ai.when.earliestDate} – ${ai.when.latestDate}`
     : "Not likely within 120 days";
 
+  const fmtPrice = (p: number) =>
+    "$" + p.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fmtRet = (target: number, current: number) => {
+    const pct = ((target - current) / current) * 100;
+    return (pct >= 0 ? "+" : "") + pct.toFixed(1) + "%";
+  };
+  const retColor = (target: number, current: number) =>
+    target >= current ? "#10b981" : "#ef4444";
+  const probBarColor = (pct: number) =>
+    pct >= 65 ? "#10b981" : pct >= 45 ? "#f59e0b" : "#ef4444";
+
   return (
-    <div className="card rounded-xl p-5">
-      <div className="flex items-start justify-between gap-3 mb-4">
+    <div className="card rounded-xl p-5 space-y-4">
+      {/* ── Header ── */}
+      <div className="flex items-start justify-between gap-3">
         <div>
           <div className="section-label">AI Momentum Rating</div>
-          <div className="text-[11px] mt-1" style={{ color: "var(--text-dim)" }}>
-            Predicts if and when price is likely to move up.
+          <div className="text-[11px] mt-0.5" style={{ color: "var(--text-dim)" }}>
+            GBM Monte Carlo · {sim?.n_paths ?? 1000} paths{sim ? ` · ${sim.annual_vol}% vol · ${sim.drift > 0 ? "+" : ""}${sim.drift}% drift` : ""}
           </div>
         </div>
         <div
-          className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded"
+          className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded shrink-0"
           style={{ background: cardColor + "14", color: cardColor, border: `1px solid ${cardColor}30` }}
         >
           {label}
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
+      {/* ── Key stats row ── */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <StatCard label="AI Rating" value={`${ai.score.toFixed(1)}/100`} />
         <StatCard label="Up Probability" value={`${(ai.upProbability * 100).toFixed(1)}%`} />
-        <StatCard label="Will Go Up?" value={ai.willGoUp ? "Yes" : "No"} />
-        <StatCard label="When" value={whenText} />
+        <StatCard label="Signal" value={ai.willGoUp ? "Bullish" : "Bearish"} />
+        <StatCard label="Upside Window" value={whenText} />
       </div>
 
+      {/* ── Simulation scenarios table ── */}
+      {sim && (
+        <div className="rounded-xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
+          {/* Table header */}
+          <div
+            className="grid grid-cols-3 text-[9px] font-semibold uppercase tracking-widest px-4 py-2"
+            style={{ background: "rgba(255,255,255,0.03)", borderBottom: "1px solid var(--border)", color: "var(--text-dim)" }}
+          >
+            <span>Scenario</span>
+            <span className="text-center">3-Month</span>
+            <span className="text-right">1-Year</span>
+          </div>
+          {/* Bull row */}
+          <div className="grid grid-cols-3 px-4 py-2.5 items-center" style={{ borderBottom: "1px solid var(--border)" }}>
+            <span className="text-[10px] font-semibold" style={{ color: "#10b981" }}>Bull Case</span>
+            <div className="text-center">
+              <div className="text-[12px] font-bold font-mono" style={{ color: "#10b981" }}>{fmtPrice(sim.bull_3m)}</div>
+              <div className="text-[9px] font-mono" style={{ color: "#10b981" }}>{fmtRet(sim.bull_3m, result.price)}</div>
+            </div>
+            <div className="text-right">
+              <div className="text-[12px] font-bold font-mono" style={{ color: "#10b981" }}>{fmtPrice(sim.bull_1y)}</div>
+              <div className="text-[9px] font-mono" style={{ color: "#10b981" }}>{fmtRet(sim.bull_1y, result.price)}</div>
+            </div>
+          </div>
+          {/* Base row */}
+          <div
+            className="grid grid-cols-3 px-4 py-2.5 items-center"
+            style={{ borderBottom: "1px solid var(--border)", background: "rgba(255,255,255,0.015)" }}
+          >
+            <span className="text-[10px] font-semibold" style={{ color: cardColor }}>Base Case</span>
+            <div className="text-center">
+              <div className="text-[12px] font-bold font-mono" style={{ color: retColor(sim.base_3m, result.price) }}>{fmtPrice(sim.base_3m)}</div>
+              <div className="text-[9px] font-mono" style={{ color: retColor(sim.base_3m, result.price) }}>{fmtRet(sim.base_3m, result.price)}</div>
+            </div>
+            <div className="text-right">
+              <div className="text-[12px] font-bold font-mono" style={{ color: retColor(sim.base_1y, result.price) }}>{fmtPrice(sim.base_1y)}</div>
+              <div className="text-[9px] font-mono" style={{ color: retColor(sim.base_1y, result.price) }}>{fmtRet(sim.base_1y, result.price)}</div>
+            </div>
+          </div>
+          {/* Bear row */}
+          <div className="grid grid-cols-3 px-4 py-2.5 items-center">
+            <span className="text-[10px] font-semibold" style={{ color: "#ef4444" }}>Bear Case</span>
+            <div className="text-center">
+              <div className="text-[12px] font-bold font-mono" style={{ color: "#ef4444" }}>{fmtPrice(sim.bear_3m)}</div>
+              <div className="text-[9px] font-mono" style={{ color: "#ef4444" }}>{fmtRet(sim.bear_3m, result.price)}</div>
+            </div>
+            <div className="text-right">
+              <div className="text-[12px] font-bold font-mono" style={{ color: "#ef4444" }}>{fmtPrice(sim.bear_1y)}</div>
+              <div className="text-[9px] font-mono" style={{ color: "#ef4444" }}>{fmtRet(sim.bear_1y, result.price)}</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Probability bars ── */}
+      {sim && (
+        <div className="space-y-2.5">
+          {([
+            { label: "Prob Up (3M)", pct: sim.prob_up_3m },
+            { label: "Prob Up (1Y)", pct: sim.prob_up_1y },
+          ] as { label: string; pct: number }[]).map(({ label: lbl, pct }) => {
+            const c = probBarColor(pct);
+            return (
+              <div key={lbl}>
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-[10px] font-mono" style={{ color: "var(--text-dim)" }}>{lbl}</span>
+                  <span className="text-[11px] font-bold font-mono" style={{ color: c }}>{pct}%</span>
+                </div>
+                <div className="h-1.5 rounded-full" style={{ background: "rgba(255,255,255,0.07)" }}>
+                  <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: c }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── Footnote ── */}
+      <p className="text-[9px] font-mono" style={{ color: "var(--text-dim)" }}>
+        GBM simulation · percentile outcomes (10th / 50th / 90th) · not financial advice
+      </p>
     </div>
   );
 }
@@ -3928,7 +4022,7 @@ export default function HomePage() {
               <PriceChart ticker={result.ticker} currentPrice={result.price} change={result.change} changePercent={result.changePercent} />
 
               {/* ── Price Projections (collapsible) ── */}
-              <CollapsibleSection title="Price Projections">
+              <CollapsibleSection key={result.ticker} title="Price Projections">
                 <div className="space-y-5">
                   <MirofishRatingCard result={result} />
                   <PriceProjPanel

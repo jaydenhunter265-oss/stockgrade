@@ -268,6 +268,24 @@ export interface MirofishGraphSignal {
   reason?: string;
 }
 
+export interface MirofishSimulation {
+  // Price percentiles at 3-month horizon (63 trading days)
+  bear_3m: number;    // 10th percentile
+  base_3m: number;    // 50th percentile (median)
+  bull_3m: number;    // 90th percentile
+  // Price percentiles at 1-year horizon (252 trading days)
+  bear_1y: number;    // 10th percentile
+  base_1y: number;    // 50th percentile (median)
+  bull_1y: number;    // 90th percentile
+  // Probability of price being above current at each horizon
+  prob_up_3m: number; // 0–100
+  prob_up_1y: number; // 0–100
+  // Parameters used
+  drift: number;      // annualized drift (e.g. 0.12 = +12%/yr)
+  annual_vol: number; // annualized volatility (e.g. 0.25 = 25%/yr)
+  n_paths: number;    // number of simulation paths run
+}
+
 export interface MirofishMeta {
   enabled: boolean;
   backendReachable: boolean;
@@ -276,6 +294,7 @@ export interface MirofishMeta {
   simulatedSignal: "bullish" | "neutral" | "bearish";
   scoreAdjustment: number;
   graphSignal: MirofishGraphSignal;
+  simulation: MirofishSimulation;
 }
 
 /* ─── Multi-Agent Forecast System ─── */

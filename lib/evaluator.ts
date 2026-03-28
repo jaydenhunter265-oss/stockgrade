@@ -899,6 +899,8 @@ export async function evaluateStock(ticker: string, _apiKey?: string): Promise<E
   const now = new Date().toISOString();
   const { aiRating, mirofish } = await getMirofishPrediction({
     ticker: symbol,
+    price: d.price,
+    beta: d.beta ?? 1,
     combinedScore,
     qualityScore,
     growthScore,
