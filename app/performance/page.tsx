@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { getStockHistory, loadPerformanceData, getPerformanceSummary } from '@/lib/performance';
 import type { PerformanceEntry, TrackedStock, PerformanceData } from '@/lib/performance';
 import { cn, timeAgo } from '@/lib/utils';
@@ -17,69 +18,80 @@ interface PerformancePick {
   daysHeld?: number;
 }
 
+/* ── Rating badge ────────────────────────────── */
 function RatingBadge({ rating }: { rating: string }) {
-  const colors = {
-    'STRONG BUY': { bg: '#22c55e', text: '#000' },
-    'BUY': { bg: '#4ade80', text: '#000' },
-    'HOLD': { bg: '#f59e0b', text: '#000' },
-    'SELL': { bg: '#f97316', text: '#fff' },
-    'STRONG SELL': { bg: '#ef4444', text: '#fff' },
-  } as Record<string, any>;
-
-  const style = colors[rating] || { bg: '#a1a1aa', text: '#000' };
+  const map: Record<string, { bg: string; color: string }> = {
+    'STRONG BUY': { bg: 'rgba(0,217,158,0.10)', color: '#00D99E' },
+    'BUY':        { bg: 'rgba(0,217,158,0.07)', color: '#00D99E' },
+    'HOLD':       { bg: 'rgba(255,184,0,0.09)',  color: '#FFB800' },
+    'SELL':       { bg: 'rgba(255,59,92,0.09)',  color: '#FF3B5C' },
+    'STRONG SELL':{ bg: 'rgba(255,59,92,0.12)',  color: '#FF3B5C' },
+  };
+  const s = map[rating] ?? { bg: 'rgba(141,153,168,0.10)', color: 'var(--text-secondary)' };
   return (
     <span
-      className="px-2 py-1 rounded text-xs font-bold uppercase tracking-wide"
-      style={{
-        background: style.bg + '14',
-        border: `1px solid ${style.bg}30`,
-        color: style.text,
-      }}
+      className="inline-flex items-center px-2.5 py-1 rounded text-[11px] font-bold uppercase tracking-wider"
+      style={{ background: s.bg, color: s.color, border: `1px solid ${s.color}28` }}
     >
       {rating}
     </span>
   );
 }
 
+/* ── P&L badge ───────────────────────────────── */
 function PnlBadge({ pnlPct }: { pnlPct?: number }) {
-  if (pnlPct === undefined) return <span className="text-xs text-gray-400">—</span>;
-
-  const color = pnlPct >= 20 ? '#22c55e' : pnlPct >= 0 ? '#10b981' : pnlPct >= -10 ? '#f59e0b' : '#ef4444';
+  if (pnlPct === undefined) return <span className="text-[13px] font-mono" style={{ color: 'var(--text-dim)' }}>—</span>;
+  const color = pnlPct >= 20 ? '#00D99E' : pnlPct >= 0 ? '#00BFA5' : pnlPct >= -10 ? '#FFB800' : '#FF3B5C';
   return (
     <span
-      className="px-2 py-1 rounded text-xs font-black font-mono tracking-wide"
-      style={{ background: color + '12', color }}
+      className="inline-flex px-2.5 py-1 rounded text-[12px] font-bold font-mono"
+      style={{ background: color + '10', color, border: `1px solid ${color}20` }}
     >
       {pnlPct >= 0 ? '+' : ''}{pnlPct.toFixed(1)}%
     </span>
   );
 }
 
+/* ── Picks table ─────────────────────────────── */
 function PerformanceTable({ picks }: { picks: PerformancePick[] }) {
   return (
     <div className="overflow-x-auto">
-      <table className="w-full">
+      <table className="perf-table">
         <thead>
-          <tr className="border-b border-gray-800">
-            <th className="text-left py-3 px-4 text-xs font-bold uppercase tracking-wider text-gray-400">Ticker</th>
-            <th className="text-left py-3 px-4 text-xs font-bold uppercase tracking-wider text-gray-400">Rating</th>
-            <th className="text-right py-3 px-4 text-xs font-bold uppercase tracking-wider text-gray-400">Score</th>
-            <th className="text-right py-3 px-4 text-xs font-bold uppercase tracking-wider text-gray-400">P&L</th>
-            <th className="text-right py-3 px-4 text-xs font-bold uppercase tracking-wider text-gray-400">Days</th>
+          <tr>
+            <th className="text-left">Ticker</th>
+            <th className="text-left">Rating</th>
+            <th className="text-right">Score</th>
+            <th className="text-right">Entry</th>
+            <th className="text-right">P&L</th>
+            <th className="text-right">Days</th>
           </tr>
         </thead>
         <tbody>
           {picks.map((pick, i) => (
-            <tr key={i} className="border-b border-gray-900 hover:bg-white/5">
-              <td className="py-3 px-4 font-mono font-semibold text-sm">{pick.ticker}</td>
-              <td className="py-3 px-4">
-                <RatingBadge rating={pick.rating} />
+            <tr key={i}>
+              <td>
+                <span className="font-mono font-bold text-[14px]" style={{ color: 'var(--text)' }}>
+                  {pick.ticker}
+                </span>
               </td>
-              <td className="py-3 px-4 text-right font-mono font-bold text-sm">{pick.score}</td>
-              <td className="py-3 px-4">
-                <PnlBadge pnlPct={pick.pnlPct} />
+              <td><RatingBadge rating={pick.rating} /></td>
+              <td className="text-right">
+                <span className="font-mono font-bold text-[13px]" style={{ color: 'var(--accent)' }}>
+                  {pick.score}
+                </span>
               </td>
-              <td className="py-3 px-4 text-right text-sm font-mono">{pick.daysHeld || '—'}</td>
+              <td className="text-right">
+                <span className="font-mono text-[13px]" style={{ color: 'var(--text-secondary)' }}>
+                  ${pick.entryPrice?.toFixed(2) ?? '—'}
+                </span>
+              </td>
+              <td className="text-right"><PnlBadge pnlPct={pick.pnlPct} /></td>
+              <td className="text-right">
+                <span className="font-mono text-[13px]" style={{ color: 'var(--text-muted)' }}>
+                  {pick.daysHeld ?? '—'}
+                </span>
+              </td>
             </tr>
           ))}
         </tbody>
@@ -88,60 +100,110 @@ function PerformanceTable({ picks }: { picks: PerformancePick[] }) {
   );
 }
 
-function StockHistoryChart({ ticker, history }: { ticker: string; history: PerformanceEntry[] }) {
+/* ── Mini sparkline ──────────────────────────── */
+function StockHistoryChart({ history }: { history: PerformanceEntry[] }) {
   if (history.length < 2) return null;
 
-  const maxPrice = Math.max(...history.map(h => h.price));
-  const minPrice = Math.min(...history.map(h => h.price));
-  const range = maxPrice - minPrice;
+  const prices = history.map(h => h.price);
+  const maxPrice = Math.max(...prices);
+  const minPrice = Math.min(...prices);
+  const range = maxPrice - minPrice || 1;
+  const isUp = prices[prices.length - 1] >= prices[0];
+  const lineColor = isUp ? '#00D99E' : '#FF3B5C';
+
+  const points = history.map((h, i) => {
+    const x = (i / (history.length - 1)) * 100;
+    const y = 100 - (((h.price - minPrice) / range) * 80 + 10);
+    return `${x},${y}`;
+  }).join(' ');
 
   return (
-    <div className="space-y-2">
-      <div className="flex justify-between text-xs font-mono text-gray-400">
-        <span>{timeAgo(history[0]?.date || '')}</span>
-        <span>{timeAgo(history[history.length - 1]?.date || '')}</span>
-      </div>
-      <div className="h-20 relative bg-gray-900/30 rounded-lg overflow-hidden">
-        <svg viewBox="0 0 100 20" className="w-full h-full">
-          <polyline
-            points={history.map((h, i) => {
-              const x = (i / (history.length - 1)) * 100;
-              const y = 20 - (((h.price - minPrice) / range) * 18 + 1);
-              return `${x},${y}`;
-            }).join(' ')}
-            fill="none"
-            stroke="#10b981"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="text-xs font-mono bg-black/50 px-2 py-1 rounded text-center">
-            {history[history.length - 1]?.price.toFixed(2)}
-          </div>
-        </div>
-      </div>
+    <div className="h-14 rounded-lg overflow-hidden relative" style={{ background: 'rgba(255,255,255,0.02)' }}>
+      <svg viewBox="0 0 100 100" className="w-full h-full" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id={`g-${lineColor.replace('#', '')}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={lineColor} stopOpacity="0.18" />
+            <stop offset="100%" stopColor={lineColor} stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        {/* Fill area */}
+        <polyline
+          points={`0,100 ${points} 100,100`}
+          fill={`url(#g-${lineColor.replace('#', '')})`}
+        />
+        {/* Line */}
+        <polyline
+          points={points}
+          fill="none"
+          stroke={lineColor}
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
     </div>
   );
 }
 
+/* ── Stat card ───────────────────────────────── */
+function StatCard({ value, label, color, sub }: { value: string; label: string; color: string; sub?: string }) {
+  return (
+    <div className="metric-card">
+      <div className="metric-label">{label}</div>
+      <div className="metric-value" style={{ color }}>{value}</div>
+      {sub && <div className="metric-sub">{sub}</div>}
+    </div>
+  );
+}
+
+/* ── Loading skeleton ────────────────────────── */
+function LoadingSkeleton() {
+  return (
+    <div className="min-h-screen" style={{ background: 'var(--bg)' }}>
+      {/* Header */}
+      <header className="sticky top-0 z-40 header-glass" style={{ borderBottom: '1px solid var(--border)' }}>
+        <div className="page-container h-14 flex items-center gap-4">
+          <div className="skeleton w-28 h-5 rounded" />
+          <div className="ml-auto skeleton w-20 h-7 rounded-lg" />
+        </div>
+      </header>
+      <main className="page-container py-12">
+        <div className="skeleton w-64 h-9 rounded-xl mb-3" />
+        <div className="skeleton w-80 h-5 rounded mb-10" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+          {[1,2,3,4].map(i => <div key={i} className="skeleton h-24 rounded-xl" />)}
+        </div>
+        <div className="skeleton h-72 rounded-xl mb-8" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1,2,3,4,5,6].map(i => <div key={i} className="skeleton h-44 rounded-xl" />)}
+        </div>
+      </main>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════
+   MAIN PAGE
+══════════════════════════════════════════════ */
+
 export default function PerformancePage() {
-  const [summary, setSummary] = useState<{ totalPicks: number; winRate: number; picks: PerformancePick[] } | null>(null);
+  const [summary, setSummary] = useState<{
+    totalPicks: number;
+    winRate: number;
+    picks: PerformancePick[];
+  } | null>(null);
   const [allData, setAllData] = useState<PerformanceData | null>(null);
   const [selectedStock, setSelectedStock] = useState<string>('');
   const [history, setHistory] = useState<PerformanceEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([
-      getPerformanceSummary(),
-      loadPerformanceData()
-    ]).then(([sum, data]) => {
-      setSummary(sum);
-      setAllData(data);
-      setLoading(false);
-    });
+    Promise.all([getPerformanceSummary(), loadPerformanceData()])
+      .then(([sum, data]) => {
+        setSummary(sum);
+        setAllData(data);
+        setLoading(false);
+      });
   }, []);
 
   useEffect(() => {
@@ -150,192 +212,356 @@ export default function PerformancePage() {
     }
   }, [selectedStock]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen py-12 px-4">
-        <div className="max-w-4xl mx-auto">
-          <div className="animate-pulse space-y-6">
-            <div className="h-8 bg-gray-800 rounded-lg w-48" />
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {[1,2,3,4].map(i => (
-                <div key={i} className="space-y-3">
-                  <div className="h-6 bg-gray-800 rounded w-3/4" />
-                  <div className="h-12 bg-gray-800 rounded-lg" />
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <LoadingSkeleton />;
 
-  const topPicks = summary?.picks.slice(0, 8) || [];
+  const topPicks = summary?.picks.slice(0, 10) || [];
   const trackedStocks = allData?.trackedStocks || {};
+  const avgPnl = topPicks.length
+    ? topPicks.filter(p => p.pnlPct !== undefined).reduce((s, p) => s + (p.pnlPct ?? 0), 0) /
+      Math.max(1, topPicks.filter(p => p.pnlPct !== undefined).length)
+    : null;
 
   return (
-    <div className="min-h-screen py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-gray-950 to-black">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-black bg-gradient-to-r from-teal-400 to-blue-500 bg-clip-text text-transparent mb-4 tracking-tight">
-            Performance Tracker
+    <div className="min-h-screen flex flex-col" style={{ background: 'var(--bg)' }}>
+
+      {/* ═══ Header ═══ */}
+      <header className="sticky top-0 z-40 header-glass">
+        <div className="page-container h-14 flex items-center gap-4">
+          {/* Logo */}
+          <Link href="/" className="flex items-center gap-2.5 group" style={{ textDecoration: 'none' }}>
+            <div
+              className="w-7 h-7 rounded-lg flex items-center justify-center text-[11px] font-black flex-shrink-0"
+              style={{ background: 'var(--accent)', color: '#000' }}
+            >
+              S
+            </div>
+            <span className="text-[14px] font-semibold tracking-tight hidden sm:block" style={{ color: 'var(--text-muted)', letterSpacing: '-0.01em' }}>
+              StockGrade
+            </span>
+          </Link>
+
+          {/* Page title */}
+          <div className="hidden md:flex items-center gap-2 ml-2">
+            <div className="w-px h-4" style={{ background: 'var(--border-hover)' }} />
+            <span className="text-[13px] font-semibold" style={{ color: 'var(--text-secondary)' }}>Performance</span>
+          </div>
+
+          <div className="ml-auto flex items-center gap-2">
+            <Link href="/" className="btn-ghost text-[12px] font-semibold px-3 py-1.5 flex items-center gap-1.5">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                <path d="M15 18l-6-6 6-6"/>
+              </svg>
+              Analyze
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      {/* ═══ Main ═══ */}
+      <main className="flex-1 page-container py-12">
+
+        {/* Page header */}
+        <div className="mb-10">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="live-dot" />
+            <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+              Live tracking
+            </span>
+          </div>
+          <h1
+            className="text-3xl sm:text-4xl font-black tracking-tight mb-3"
+            style={{ color: 'var(--text)', letterSpacing: '-0.04em' }}
+          >
+            Performance{' '}
+            <span className="gradient-text">Tracker</span>
           </h1>
-          <p className="text-xl text-gray-400 max-w-2xl mx-auto leading-relaxed">
-            Tracking {Object.keys(trackedStocks).length || 0} stocks with {summary?.totalPicks || 0} rated picks
+          <p className="text-[15px] leading-relaxed max-w-xl" style={{ color: 'var(--text-muted)' }}>
+            Tracking{' '}
+            <span className="font-semibold" style={{ color: 'var(--text-secondary)' }}>
+              {Object.keys(trackedStocks).length}
+            </span>{' '}
+            stocks with{' '}
+            <span className="font-semibold" style={{ color: 'var(--text-secondary)' }}>
+              {summary?.totalPicks ?? 0}
+            </span>{' '}
+            rated picks in the ledger.
           </p>
         </div>
 
-        {/* Summary Cards */}
+        {/* ═══ Summary stats ═══ */}
         {summary && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-            <div className="group p-6 rounded-2xl bg-gray-900/50 border border-gray-800 hover:border-teal-500/50 transition-all duration-300">
-              <div className="text-3xl font-black text-teal-400 group-hover:text-teal-300 mb-2">{summary.totalPicks}</div>
-              <div className="text-sm font-medium text-gray-400 uppercase tracking-wider">Total Picks</div>
-            </div>
-            <div className="group p-6 rounded-2xl bg-gray-900/50 border border-gray-800 hover:border-emerald-500/50 transition-all duration-300">
-              <div className="text-3xl font-black bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent mb-2">
-                {Math.round(summary.winRate * 100)}%
-              </div>
-              <div className="text-sm font-medium text-gray-400 uppercase tracking-wider">Win Rate</div>
-            </div>
-            <div className="group p-6 rounded-2xl bg-gray-900/50 border border-gray-800 hover:border-amber-500/50 transition-all duration-300">
-              <div className="text-3xl font-black text-amber-400 group-hover:text-amber-300 mb-2">
-                {topPicks[0]?.pnlPct ? topPicks[0].pnlPct.toFixed(1) + '%' : '—'}
-              </div>
-              <div className="text-sm font-medium text-gray-400 uppercase tracking-wider">Best Pick</div>
-            </div>
-            <div className="group p-6 rounded-2xl bg-gray-900/50 border border-gray-800 hover:border-blue-500/50 transition-all duration-300">
-              <div className="text-3xl font-black text-blue-400 group-hover:text-blue-300 mb-2">
-                {Object.keys(trackedStocks).length}
-              </div>
-              <div className="text-sm font-medium text-gray-400 uppercase tracking-wider">Tracked Stocks</div>
-            </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+            <StatCard
+              label="Total Picks"
+              value={String(summary.totalPicks)}
+              color="var(--accent)"
+              sub="Tracked since launch"
+            />
+            <StatCard
+              label="Win Rate"
+              value={`${Math.round(summary.winRate * 100)}%`}
+              color={summary.winRate >= 0.5 ? 'var(--green)' : 'var(--amber)'}
+              sub={summary.winRate >= 0.5 ? 'Above 50% threshold' : 'Below 50% threshold'}
+            />
+            <StatCard
+              label="Best Pick"
+              value={topPicks[0]?.pnlPct != null ? `${topPicks[0].pnlPct >= 0 ? '+' : ''}${topPicks[0].pnlPct.toFixed(1)}%` : '—'}
+              color={topPicks[0]?.pnlPct != null && topPicks[0].pnlPct >= 0 ? 'var(--green)' : 'var(--red)'}
+              sub={topPicks[0]?.ticker ?? 'No picks yet'}
+            />
+            <StatCard
+              label="Tracked Stocks"
+              value={String(Object.keys(trackedStocks).length)}
+              color="var(--blue)"
+              sub="Unique tickers evaluated"
+            />
           </div>
         )}
 
-        {/* Top Picks Table */}
+        {/* ═══ Recent picks table ═══ */}
         {topPicks.length > 0 && (
-          <div className="bg-gray-900/30 border border-gray-800 rounded-2xl p-6 mb-12">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-black">Recent Picks</h2>
-              <a href="#all-picks" className="text-sm font-medium text-teal-400 hover:text-teal-300">View All →</a>
+          <div className="card mb-10">
+            <div className="flex items-center justify-between px-5 pt-5 pb-4" style={{ borderBottom: '1px solid var(--border)' }}>
+              <div className="flex items-center gap-2.5">
+                <div className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--accent)' }} />
+                <h2 className="text-[15px] font-bold" style={{ color: 'var(--text)' }}>Recent Picks</h2>
+              </div>
+              <span className="text-[11px] font-mono" style={{ color: 'var(--text-dim)' }}>
+                Showing {topPicks.length} picks
+              </span>
             </div>
-            <PerformanceTable picks={topPicks} />
+            <div className="px-0 pb-0">
+              <PerformanceTable picks={topPicks} />
+            </div>
           </div>
         )}
 
-        {/* Tracked Stocks Grid */}
+        {/* ═══ Empty state ═══ */}
+        {topPicks.length === 0 && !loading && (
+          <div className="empty-state mb-10">
+            <div className="empty-state-icon">📊</div>
+            <h3 className="text-[15px] font-bold mb-2" style={{ color: 'var(--text)' }}>No picks yet</h3>
+            <p className="text-[13px] max-w-xs leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+              Start analyzing stocks on the home page to build your performance record.
+            </p>
+            <Link
+              href="/"
+              className="btn-primary mt-5 px-5 py-2.5 text-[13px] inline-flex items-center gap-2"
+            >
+              Analyze a Stock →
+            </Link>
+          </div>
+        )}
+
+        {/* ═══ Tracked stocks grid ═══ */}
         {Object.keys(trackedStocks).length > 0 && (
-          <div className="mb-12">
-            <h2 className="text-2xl font-black mb-8 text-center">Tracked Stock History</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <section className="mb-10">
+            <div className="flex items-center gap-3 mb-6">
+              <h2 className="text-[17px] font-bold" style={{ color: 'var(--text)' }}>Tracked Stock History</h2>
+              <span
+                className="text-[11px] font-mono px-2 py-0.5 rounded"
+                style={{ background: 'var(--card-raised)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}
+              >
+                {Math.min(Object.keys(trackedStocks).length, 9)} shown
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {Object.entries(trackedStocks).slice(0, 9).map(([ticker, stock]) => {
                 const latest = stock.entries[stock.entries.length - 1];
+                const earliest = stock.entries[0];
+                const isSelected = selectedStock === ticker;
+                const priceChange = latest && earliest
+                  ? ((latest.price - earliest.price) / earliest.price) * 100
+                  : null;
+                const scoreColor = latest?.score >= 65 ? 'var(--green)' : latest?.score >= 40 ? 'var(--amber)' : 'var(--red)';
+
                 return (
                   <div
                     key={ticker}
-                    className="group p-6 rounded-2xl bg-gray-900/50 border border-gray-800 hover:border-teal-500/50 hover:bg-gray-900/70 transition-all duration-300 cursor-pointer"
-                    onClick={() => setSelectedStock(ticker)}
+                    onClick={() => setSelectedStock(isSelected ? '' : ticker)}
+                    className={cn(
+                      'card card-interactive p-5 cursor-pointer',
+                      isSelected && 'shadow-glow'
+                    )}
+                    style={isSelected ? { borderColor: 'var(--accent-border)', background: 'var(--card-hover)' } : {}}
                   >
+                    {/* Top row */}
                     <div className="flex items-start justify-between mb-4">
                       <div>
-                        <div className="text-lg font-black font-mono text-white">{ticker}</div>
-                        <div className="text-sm text-gray-400 mt-1">First tracked {timeAgo(stock.firstTracked)}</div>
+                        <div className="text-[16px] font-black font-mono tracking-tight" style={{ color: 'var(--text)' }}>
+                          {ticker}
+                        </div>
+                        <div className="text-[12px] mt-0.5" style={{ color: 'var(--text-dim)' }}>
+                          First tracked {timeAgo(stock.firstTracked)}
+                        </div>
                       </div>
                       {latest && (
                         <div className="text-right">
-                          <div className="text-2xl font-black text-teal-400">{latest.score.toFixed(0)}</div>
-                          <div className="text-xs text-gray-500">${latest.price.toFixed(2)}</div>
+                          <div className="text-[22px] font-black font-mono leading-none" style={{ color: scoreColor }}>
+                            {latest.score.toFixed(0)}
+                          </div>
+                          <div className="text-[11px] font-mono mt-0.5" style={{ color: 'var(--text-dim)' }}>
+                            ${latest.price.toFixed(2)}
+                          </div>
                         </div>
                       )}
                     </div>
+
+                    {/* Sparkline */}
                     {stock.entries.length > 1 && (
-                      <StockHistoryChart ticker={ticker} history={stock.entries.slice(-20)} />
+                      <div className="mb-3">
+                        <StockHistoryChart history={stock.entries.slice(-20)} />
+                      </div>
                     )}
-                    <div className="text-xs text-gray-500 mt-3">
-                      {stock.entries.length} evaluations • {stock.picks.length} picks
+
+                    {/* Bottom row */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px]" style={{ color: 'var(--text-dim)' }}>
+                        {stock.entries.length} evals · {stock.picks.length} picks
+                      </span>
+                      {priceChange !== null && (
+                        <span
+                          className="text-[11px] font-bold font-mono px-2 py-0.5 rounded"
+                          style={{
+                            color: priceChange >= 0 ? 'var(--green)' : 'var(--red)',
+                            background: priceChange >= 0 ? 'rgba(0,217,158,0.08)' : 'rgba(255,59,92,0.08)',
+                          }}
+                        >
+                          {priceChange >= 0 ? '+' : ''}{priceChange.toFixed(1)}%
+                        </span>
+                      )}
                     </div>
                   </div>
                 );
               })}
             </div>
-          </div>
+          </section>
         )}
 
-        {/* Selected Stock Detail */}
+        {/* ═══ Selected stock detail ═══ */}
         {selectedStock && history.length > 0 && (
-          <div id="stock-detail" className="mb-12">
-            <div className="max-w-4xl mx-auto bg-gray-900/50 border border-gray-800 rounded-2xl p-8">
+          <section className="mb-10 animate-fade-in">
+            <div
+              className="card p-6 sm:p-8"
+              style={{ borderColor: 'var(--border-hover)' }}
+            >
+              {/* Header */}
               <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-10 h-10 rounded-xl flex items-center justify-center text-[13px] font-black"
+                    style={{ background: 'var(--accent-dim)', color: 'var(--accent)', border: '1px solid var(--accent-border)' }}
+                  >
+                    {selectedStock.slice(0, 2)}
+                  </div>
+                  <div>
+                    <div className="text-[18px] font-black tracking-tight" style={{ color: 'var(--text)' }}>
+                      {selectedStock}
+                    </div>
+                    <div className="text-[12px]" style={{ color: 'var(--text-dim)' }}>
+                      {history.length} data points
+                    </div>
+                  </div>
+                </div>
                 <button
                   onClick={() => setSelectedStock('')}
-                  className="flex items-center gap-2 text-sm font-medium text-gray-400 hover:text-white transition-colors"
+                  className="btn-ghost px-3 py-1.5 text-[12px] flex items-center gap-1.5"
                 >
-                  ← Back to overview
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                    <path d="M15 18l-6-6 6-6"/>
+                  </svg>
+                  Close
                 </button>
-                <div className="text-3xl font-black text-white">{selectedStock}</div>
               </div>
-              
+
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* History Chart */}
+                {/* Score history chart */}
                 <div>
-                  <h3 className="text-lg font-bold mb-4">Score History</h3>
-                  <StockHistoryChart ticker={selectedStock} history={history} />
-                  <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-gray-400">
-                    <div>Current: {history[history.length-1]?.score?.toFixed(0) || '—'}</div>
-                    <div>Trend: {history[history.length-1]?.score! > history[history.length-10]?.score! ? '↑ Improving' : '↓ Declining'}</div>
+                  <div className="section-label mb-4">Score History</div>
+                  <StockHistoryChart history={history} />
+                  <div className="mt-3 flex items-center justify-between text-[12px]" style={{ color: 'var(--text-dim)' }}>
+                    <span>{timeAgo(history[0]?.date ?? '')}</span>
+                    <span>{timeAgo(history[history.length - 1]?.date ?? '')}</span>
                   </div>
                 </div>
 
-                {/* Stats */}
+                {/* Key stats */}
                 <div>
-                  <h3 className="text-lg font-bold mb-4">Key Stats</h3>
-                  <div className="space-y-3">
-                    <div className="flex justify-between py-2 border-b border-gray-800">
-                      <span className="text-sm font-medium text-gray-300">Evaluations</span>
-                      <span className="font-mono font-bold text-white">{history.length}</span>
-                    </div>
-                    <div className="flex justify-between py-2 border-b border-gray-800">
-                      <span className="text-sm font-medium text-gray-300">Avg Score</span>
-                      <span className="font-mono font-bold text-teal-400">
-                        {Math.round(history.reduce((a,b)=>a+b.score,0)/history.length)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between py-2 border-b border-gray-800">
-                      <span className="text-sm font-medium text-gray-300">Best Score</span>
-                      <span className="font-mono font-bold text-emerald-400">
-                        {Math.max(...history.map(h => h.score)).toFixed(0)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between py-2">
-                      <span className="text-sm font-medium text-gray-300">Recent Rating</span>
-                      <div>
-                        <RatingBadge rating={history[history.length-1]?.rating || 'HOLD'} />
+                  <div className="section-label mb-4">Key Stats</div>
+                  <div className="space-y-0" style={{ border: '1px solid var(--border)', borderRadius: 'var(--r-md)', overflow: 'hidden' }}>
+                    {[
+                      { label: 'Total Evaluations', value: history.length.toString(), color: 'var(--text)' },
+                      { label: 'Average Score', value: String(Math.round(history.reduce((a, b) => a + b.score, 0) / history.length)), color: 'var(--accent)' },
+                      { label: 'Best Score', value: Math.max(...history.map(h => h.score)).toFixed(0), color: 'var(--green)' },
+                      { label: 'Latest Score', value: history[history.length - 1]?.score.toFixed(0) ?? '—', color: history[history.length-1]?.score >= 55 ? 'var(--green)' : history[history.length-1]?.score >= 35 ? 'var(--amber)' : 'var(--red)' },
+                      { label: 'Score Trend', value: history[history.length-1]?.score > history[Math.max(0, history.length-5)]?.score ? '↑ Improving' : '↓ Declining', color: history[history.length-1]?.score > history[Math.max(0, history.length-5)]?.score ? 'var(--green)' : 'var(--red)' },
+                    ].map((row, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center justify-between px-4 py-3"
+                        style={{ borderBottom: i < 4 ? '1px solid var(--border)' : undefined }}
+                      >
+                        <span className="text-[13px] font-medium" style={{ color: 'var(--text-secondary)' }}>{row.label}</span>
+                        <span className="font-mono font-bold text-[13px]" style={{ color: row.color }}>{row.value}</span>
                       </div>
-                    </div>
+                    ))}
                   </div>
+
+                  {/* Latest rating */}
+                  {history[history.length - 1]?.rating && (
+                    <div className="mt-4 flex items-center gap-3">
+                      <span className="text-[12px]" style={{ color: 'var(--text-dim)' }}>Latest rating:</span>
+                      <RatingBadge rating={history[history.length - 1].rating} />
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
-          </div>
+          </section>
         )}
 
-        {/* CTA */}
-        <div className="text-center py-16">
-          <h2 className="text-2xl font-black mb-4 text-white">Ready to dive deeper?</h2>
-          <p className="text-lg text-gray-400 mb-8 max-w-md mx-auto">
-            Track more stocks and see full historical performance analysis.
-          </p>
-          <a 
-            href="/analyze" 
-            className="inline-flex items-center gap-2 px-8 py-4 rounded-xl font-bold text-lg bg-gradient-to-r from-teal-500 to-blue-500 text-white hover:from-teal-600 hover:to-blue-600 transition-all duration-300 shadow-2xl hover:shadow-teal-500/25 hover:-translate-y-1"
+        {/* ═══ CTA ═══ */}
+        <div
+          className="rounded-2xl p-8 sm:p-10 text-center"
+          style={{ background: 'var(--card)', border: '1px solid var(--border)' }}
+        >
+          <div
+            className="w-12 h-12 rounded-xl flex items-center justify-center text-xl mx-auto mb-5"
+            style={{ background: 'var(--accent-dim)', border: '1px solid var(--accent-border)' }}
           >
-            Start Tracking →
-          </a>
+            📈
+          </div>
+          <h2 className="text-[20px] font-black mb-2 tracking-tight" style={{ color: 'var(--text)', letterSpacing: '-0.02em' }}>
+            Analyze more stocks
+          </h2>
+          <p className="text-[14px] max-w-sm mx-auto mb-6 leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+            Every evaluation adds to your performance record. Track as many stocks as you want.
+          </p>
+          <Link
+            href="/"
+            className="btn-primary inline-flex items-center gap-2 px-6 py-3 text-[14px]"
+          >
+            Start Analyzing
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+          </Link>
         </div>
-      </div>
+      </main>
+
+      {/* ═══ Footer ═══ */}
+      <footer style={{ borderTop: '1px solid var(--border)', marginTop: '48px' }}>
+        <div className="page-container py-5">
+          <div className="flex items-center justify-between text-[12px]" style={{ color: 'var(--text-dim)' }}>
+            <span>© {new Date().getFullYear()} StockGrade</span>
+            <div className="flex items-center gap-4">
+              <Link href="/" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>Analyze</Link>
+              <Link href="/methodology" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>Methodology</Link>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
-

@@ -138,30 +138,10 @@ function SignalBadge({ signal }: { signal: "buy" | "neutral" | "sell" }) {
 
 function StatCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div
-      className="rounded-lg p-3.5 transition-all duration-150"
-      style={{
-        background: "var(--card)",
-        border: "1px solid var(--border)",
-      }}
-    >
-      <div
-        className="text-[9px] font-semibold uppercase tracking-[0.1em] mb-1.5"
-        style={{ color: "var(--text-muted)" }}
-      >
-        {label}
-      </div>
-      <div
-        className="text-[14px] font-semibold font-mono leading-none"
-        style={{ color: "var(--text)", letterSpacing: "-0.01em" }}
-      >
-        {value}
-      </div>
-      {sub && (
-        <div className="text-[9px] mt-1" style={{ color: "var(--text-dim)" }}>
-          {sub}
-        </div>
-      )}
+    <div className="stat-tile">
+      <div className="stat-tile-label">{label}</div>
+      <div className="stat-tile-value">{value}</div>
+      {sub && <div className="stat-tile-sub">{sub}</div>}
     </div>
   );
 }
@@ -226,22 +206,22 @@ function PerformancePreview() {
             <>
               <div className="text-center">
                 <div className="text-2xl font-black font-mono" style={{ color: "var(--accent)" }}>{stats.totalPicks}</div>
-                <div className="text-[10px] font-medium mt-1" style={{ color: "var(--text-dim)" }}>Rated Picks</div>
+                <div className="text-[11px] font-semibold mt-1.5" style={{ color: "var(--text-dim)" }}>Rated Picks</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-black font-mono" style={{ color: "#10b981" }}>{stats.trackedStocks}</div>
-                <div className="text-[10px] font-medium mt-1" style={{ color: "var(--text-dim)" }}>Tracked Stocks</div>
+                <div className="text-2xl font-black font-mono" style={{ color: "var(--green)" }}>{stats.trackedStocks}</div>
+                <div className="text-[11px] font-semibold mt-1.5" style={{ color: "var(--text-dim)" }}>Tracked Stocks</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-black font-mono" style={{ color: stats.winRate >= 50 ? "#10b981" : "#f59e0b" }}>{stats.winRate}%</div>
-                <div className="text-[10px] font-medium mt-1" style={{ color: "var(--text-dim)" }}>Win Rate</div>
+                <div className="text-2xl font-black font-mono" style={{ color: stats.winRate >= 50 ? "var(--green)" : "var(--amber)" }}>{stats.winRate}%</div>
+                <div className="text-[11px] font-semibold mt-1.5" style={{ color: "var(--text-dim)" }}>Win Rate</div>
               </div>
               {stats.topPick?.pnlPct !== undefined && (
                 <div className="text-center hidden sm:block">
-                  <div className="text-2xl font-black font-mono" style={{ color: stats.topPick.pnlPct >= 0 ? "#10b981" : "#ef4444" }}>
+                  <div className="text-2xl font-black font-mono" style={{ color: stats.topPick.pnlPct >= 0 ? "var(--green)" : "var(--red)" }}>
                     {stats.topPick.pnlPct >= 0 ? "+" : ""}{stats.topPick.pnlPct.toFixed(1)}%
                   </div>
-                  <div className="text-[10px] font-medium mt-1" style={{ color: "var(--text-dim)" }}>Best Pick ({stats.topPick.ticker})</div>
+                  <div className="text-[11px] font-semibold mt-1.5" style={{ color: "var(--text-dim)" }}>Best Pick ({stats.topPick.ticker})</div>
                 </div>
               )}
             </>
@@ -249,22 +229,22 @@ function PerformancePreview() {
             <>
               <div className="text-center">
                 <div className="text-2xl font-black font-mono" style={{ color: "var(--accent)" }}>350+</div>
-                <div className="text-[10px] font-medium mt-1" style={{ color: "var(--text-dim)" }}>Metrics Analyzed</div>
+                <div className="text-[11px] font-semibold mt-1.5" style={{ color: "var(--text-dim)" }}>Metrics Analyzed</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-black font-mono" style={{ color: "#10b981" }}>9</div>
-                <div className="text-[10px] font-medium mt-1" style={{ color: "var(--text-dim)" }}>Score Categories</div>
+                <div className="text-2xl font-black font-mono" style={{ color: "var(--green)" }}>9</div>
+                <div className="text-[11px] font-semibold mt-1.5" style={{ color: "var(--text-dim)" }}>Score Categories</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-black font-mono" style={{ color: "#a78bfa" }}>4</div>
-                <div className="text-[10px] font-medium mt-1" style={{ color: "var(--text-dim)" }}>Pillar Scores</div>
+                <div className="text-2xl font-black font-mono" style={{ color: "var(--purple)" }}>4</div>
+                <div className="text-[11px] font-semibold mt-1.5" style={{ color: "var(--text-dim)" }}>Pillar Scores</div>
               </div>
             </>
           )}
         </div>
 
         <div className="mt-5 pt-4 text-center" style={{ borderTop: "1px solid var(--border)" }}>
-          <p className="text-[12px]" style={{ color: "var(--text-muted)" }}>
+          <p className="text-[13px] leading-relaxed" style={{ color: "var(--text-muted)" }}>
             Each stock is graded on Fundamentals (40pts), Technicals (30pts), Sentiment (20pts), and Risk (10pts) for a transparent 100-point score.
           </p>
         </div>
@@ -642,11 +622,11 @@ function CategoryBar({ category, index }: { category: CategoryScore; index: numb
               {category.name}
             </h3>
             <div className="flex items-center gap-2 mt-0.5">
-              <span className="text-[10px] font-medium" style={{ color: "#10b981" }}>{buyCount} buy</span>
-              <span className="text-[10px]" style={{ color: "var(--border-hover)" }}>·</span>
-              <span className="text-[10px] font-medium" style={{ color: "#f59e0b" }}>{neutralCount} hold</span>
-              <span className="text-[10px]" style={{ color: "var(--border-hover)" }}>·</span>
-              <span className="text-[10px] font-medium" style={{ color: "#ef4444" }}>{sellCount} sell</span>
+              <span className="text-[11px] font-semibold" style={{ color: "var(--green)" }}>{buyCount} buy</span>
+              <span className="text-[10px]" style={{ color: "var(--border-strong)" }}>·</span>
+              <span className="text-[11px] font-semibold" style={{ color: "var(--amber)" }}>{neutralCount} hold</span>
+              <span className="text-[10px]" style={{ color: "var(--border-strong)" }}>·</span>
+              <span className="text-[11px] font-semibold" style={{ color: "var(--red)" }}>{sellCount} sell</span>
             </div>
           </div>
         </div>
@@ -1112,13 +1092,13 @@ function AIVerdictBanner({
           {icon}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: ratingColor }}>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-[11px] font-bold uppercase tracking-widest" style={{ color: ratingColor }}>
               AI Outlook
             </span>
             <span
-              className="text-[9px] font-mono px-1.5 py-0.5 rounded"
-              style={{ background: ratingColor + "10", color: ratingColor }}
+              className="text-[10px] font-mono px-2 py-0.5 rounded"
+              style={{ background: ratingColor + "10", color: ratingColor, border: `1px solid ${ratingColor}20` }}
             >
               {rating}
             </span>
@@ -2137,10 +2117,10 @@ function MarketPulseStrip({
   if (movers.length === 0) return null;
 
   return (
-    <div className="w-full max-w-[1180px] mx-auto px-4 sm:px-6 mb-4">
+    <div className="w-full max-w-[1180px] mx-auto px-4 sm:px-6 mb-6">
       <div className="flex items-center gap-2 mb-3">
-        <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: "#10b981" }} />
-        <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--text-dim)" }}>
+        <div className="live-dot" />
+        <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--text-dim)" }}>
           Market Movers
         </span>
       </div>
@@ -2149,8 +2129,8 @@ function MarketPulseStrip({
           <button
             key={stock.ticker}
             onClick={() => onEvaluate(stock.ticker)}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-all hover:bg-white/5"
-            style={{ background: "var(--card)", border: "1px solid var(--border)" }}
+            className="flex items-center gap-2 px-3.5 py-2 rounded-lg cursor-pointer transition-all hover:bg-white/5"
+            style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: "var(--r-md)" }}
           >
             {stock.image && (
               <img
@@ -2165,7 +2145,7 @@ function MarketPulseStrip({
             <span className="text-[12px] font-mono font-bold" style={{ color: "var(--text)" }}>
               {stock.ticker}
             </span>
-            <span className="text-[11px] font-mono font-semibold" style={{ color: stock.changePercent >= 0 ? "#10b981" : "#ef4444" }}>
+            <span className="text-[12px] font-mono font-bold" style={{ color: stock.changePercent >= 0 ? "var(--green)" : "var(--red)" }}>
               {stock.changePercent >= 0 ? "+" : ""}
               {stock.changePercent.toFixed(2)}%
             </span>
@@ -2762,9 +2742,9 @@ function ShouldYouBuyNowBox({
       className="rounded-xl p-5"
       style={{ background: verdictBg, border: `2px solid ${verdictColor}28` }}
     >
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex items-center gap-2 mb-5">
         <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: verdictColor }} />
-        <span className="text-[9px] font-bold uppercase tracking-[0.15em]" style={{ color: verdictColor }}>
+        <span className="text-[11px] font-bold uppercase tracking-[0.12em]" style={{ color: verdictColor }}>
           Should You Buy Now?
         </span>
       </div>
@@ -2772,7 +2752,7 @@ function ShouldYouBuyNowBox({
       <div className="flex items-center gap-4 mb-4">
         {/* Verdict */}
         <div className="flex-shrink-0">
-          <div className="text-[9px] font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--text-dim)" }}>Verdict</div>
+          <div className="text-[11px] font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--text-dim)" }}>Verdict</div>
           <div className="text-[32px] font-black leading-none" style={{ color: verdictColor, letterSpacing: "-0.04em" }}>
             {verdict}
           </div>
@@ -2783,7 +2763,7 @@ function ShouldYouBuyNowBox({
 
         {/* Confidence */}
         <div className="flex-shrink-0">
-          <div className="text-[9px] font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--text-dim)" }}>Confidence</div>
+          <div className="text-[11px] font-semibold uppercase tracking-wider mb-1" style={{ color: "var(--text-dim)" }}>Confidence</div>
           <div className="flex items-baseline gap-0.5">
             <span className="text-[28px] font-black font-mono leading-none" style={{ color: "var(--text)", letterSpacing: "-0.04em" }}>
               {confidence}
@@ -2815,13 +2795,13 @@ function ShouldYouBuyNowBox({
 
       {/* Key reason */}
       <div
-        className="rounded-lg px-3.5 py-2.5"
+        className="rounded-xl px-4 py-3.5"
         style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.06)" }}
       >
-        <span className="text-[9px] font-bold uppercase tracking-wider mr-2" style={{ color: verdictColor }}>
-          Key Reason
+        <span className="text-[11px] font-bold uppercase tracking-wider mr-2" style={{ color: verdictColor }}>
+          Key Reason ·
         </span>
-        <span className="text-[12px] leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+        <span className="text-[13px] leading-relaxed" style={{ color: "var(--text-secondary)" }}>
           {keyReason}
         </span>
       </div>
@@ -3317,21 +3297,9 @@ function KeyMetricsStrip({
   return (
     <div className={`grid gap-2.5 ${cols}`}>
       {metrics.map((m) => (
-        <div
-          key={m.label}
-          className="rounded-xl p-3.5 transition-all duration-150"
-          style={{ background: "var(--card)", border: "1px solid var(--border)" }}
-        >
-          <div
-            className="text-[9px] font-semibold uppercase tracking-[0.1em] mb-1.5"
-            style={{ color: "var(--text-muted)" }}
-          >
-            {m.label}
-          </div>
-          <div
-            className="text-[13px] font-semibold font-mono leading-none"
-            style={{ color: m.valueColor ?? "var(--text)", letterSpacing: "-0.01em" }}
-          >
+        <div key={m.label} className="stat-tile">
+          <div className="stat-tile-label">{m.label}</div>
+          <div className="stat-tile-value" style={{ color: m.valueColor ?? "var(--text)" }}>
             {m.value}
           </div>
         </div>
@@ -3445,30 +3413,22 @@ export default function HomePage() {
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "var(--bg)" }}>
       {/* ═══════ Header ═══════ */}
-      <header
-        className="sticky top-0 z-40"
-        style={{
-          background: "rgba(0, 0, 0, 0.95)",
-          borderBottom: "1px solid var(--border)",
-          backdropFilter: "blur(20px)",
-          WebkitBackdropFilter: "blur(20px)",
-        }}
-      >
+      <header className="sticky top-0 z-40 header-glass">
         <div className="w-full max-w-[1180px] mx-auto px-4 sm:px-6 h-14 flex items-center gap-4">
           {/* Logo */}
           <button
             onClick={goHome}
-            className="flex items-center gap-2 flex-shrink-0 group"
+            className="flex items-center gap-2.5 flex-shrink-0 group"
             style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}
           >
             <div
-              className="w-6 h-6 rounded flex items-center justify-center text-[10px] font-black flex-shrink-0"
+              className="w-7 h-7 rounded-lg flex items-center justify-center text-[11px] font-black flex-shrink-0 transition-all duration-150 group-hover:brightness-110"
               style={{ background: "var(--accent)", color: "#000" }}
             >
               S
             </div>
             <span
-              className="text-[13px] font-semibold tracking-tight transition-colors duration-150 group-hover:text-white hidden sm:block"
+              className="text-[14px] font-semibold tracking-tight transition-colors duration-150 group-hover:text-white hidden sm:block"
               style={{ color: "var(--text-muted)", letterSpacing: "-0.01em" }}
             >
               StockGrade
@@ -3479,8 +3439,8 @@ export default function HomePage() {
           {searched && (
             <form onSubmit={handleEvaluate} className="hidden md:flex items-center gap-2 flex-1 max-w-md">
               <div className="relative flex-1">
-                <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "var(--text-dim)" }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "var(--text-muted)" }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
                   </svg>
                 </div>
@@ -3494,7 +3454,8 @@ export default function HomePage() {
                     background: "var(--bg-elevated)",
                     border: "1px solid var(--border)",
                     color: "var(--text)",
-                    letterSpacing: "0.02em",
+                    letterSpacing: "0.04em",
+                    borderRadius: "var(--r-md)",
                   }}
                 />
                 {ticker && (
@@ -3522,30 +3483,21 @@ export default function HomePage() {
             {searched && (
               <button
                 onClick={goHome}
-                className="btn-ghost text-[12px] font-medium px-3 py-1.5 hidden md:flex items-center gap-1.5"
+                className="btn-ghost text-[12px] font-semibold px-3 py-1.5 hidden md:flex items-center gap-1.5"
               >
-                <span>←</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                  <path d="M15 18l-6-6 6-6"/>
+                </svg>
                 <span>Home</span>
               </button>
             )}
-            <a
-              href="/simulate"
-              className="text-[11px] font-semibold px-3 py-1.5 rounded transition-colors hover:brightness-110 hidden sm:block"
-              style={{ color: "var(--accent)", background: "rgba(0,191,165,0.08)", border: "1px solid rgba(0,191,165,0.2)" }}
-            >
+            <a href="/simulate" className="nav-link nav-link-accent hidden sm:block">
               Simulate
             </a>
-            <a
-              href="/performance"
-              className="text-[11px] font-semibold px-3 py-1.5 rounded transition-colors hover:brightness-110 hidden sm:block"
-              style={{ color: "#3b82f6", background: "rgba(59,130,246,0.08)", border: "1px solid rgba(59,130,246,0.15)" }}
-            >
+            <a href="/performance" className="nav-link nav-link-blue hidden sm:block">
               Performance
             </a>
-            <div
-              className="text-[9px] font-semibold px-2 py-1 rounded tracking-[0.1em] hidden sm:block"
-              style={{ background: "var(--accent-dim)", color: "var(--accent)", border: "1px solid var(--accent-border)" }}
-            >
+            <div className="nav-badge hidden sm:block">
               350+ METRICS
             </div>
           </div>
@@ -3562,23 +3514,23 @@ export default function HomePage() {
               style={{ background: "radial-gradient(ellipse at center, rgba(0,191,165,0.06) 0%, transparent 60%)" }}
             />
 
-            <div className="relative z-10 flex flex-col items-center px-4 sm:px-6 pt-14 sm:pt-20 pb-8 sm:pb-10">
+            <div className="relative z-10 flex flex-col items-center px-4 sm:px-6 pt-16 sm:pt-24 pb-10 sm:pb-14">
               <div
-                className="text-[10px] font-semibold uppercase tracking-[0.15em] px-3 py-1 rounded mb-5 animate-fade-in"
+                className="text-[11px] font-bold uppercase tracking-[0.12em] px-4 py-1.5 rounded-full mb-6 animate-fade-in"
                 style={{ background: "var(--accent-dim)", color: "var(--accent)", border: "1px solid var(--accent-border)" }}
               >
                 350+ Metrics · Real Data · Transparent Scoring
               </div>
 
               <h1
-                className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-center mb-4 animate-fade-in stagger-1"
-                style={{ color: "var(--text)", lineHeight: 1.08, maxWidth: "700px" }}
+                className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tight text-center mb-5 animate-fade-in stagger-1"
+                style={{ color: "var(--text)", lineHeight: 1.05, maxWidth: "760px", letterSpacing: "-0.04em" }}
               >
                 Smarter Stock Picks.{" "}
                 <span className="gradient-text">Backed by Data.</span>
               </h1>
 
-              <p className="text-sm sm:text-base text-center max-w-lg mb-7 animate-fade-in stagger-2 leading-relaxed" style={{ color: "var(--text-muted)" }}>
+              <p className="text-[15px] sm:text-base text-center max-w-[480px] mb-8 animate-fade-in stagger-2 leading-relaxed" style={{ color: "var(--text-secondary)" }}>
                 Transparent grading system using fundamentals, technicals, and sentiment.
                 Every score explained. Every metric visible.
               </p>
@@ -3628,15 +3580,15 @@ export default function HomePage() {
 
               {/* Recent Searches */}
               {recentSearches.length > 0 && (
-                <div className="mt-3 flex items-center gap-2 animate-fade-in stagger-3 flex-wrap justify-center">
-                  <span className="text-[10px] font-medium uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>Recent</span>
-                  <div className="w-px h-3" style={{ background: "var(--border)" }} />
+                <div className="mt-4 flex items-center gap-2 animate-fade-in stagger-3 flex-wrap justify-center">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>Recent</span>
+                  <div className="w-px h-3.5" style={{ background: "var(--border-hover)" }} />
                   {recentSearches.slice(0, 5).map((t) => (
                     <button
                       key={t}
                       onClick={() => { setTicker(t); handleEvaluateDirect(t); }}
-                      className="px-3 py-1 rounded text-[11px] font-mono font-semibold cursor-pointer ticker-btn"
-                      style={{ color: "var(--accent)", border: "1px solid var(--accent-border)", background: "var(--accent-dim)" }}
+                      className="px-3 py-1.5 rounded-lg text-[12px] font-mono font-bold cursor-pointer ticker-btn"
+                      style={{ color: "var(--accent)", border: "1px solid var(--accent-border)", background: "var(--accent-dim)", borderRadius: "var(--r-md)" }}
                     >
                       {t}
                     </button>
@@ -3650,8 +3602,8 @@ export default function HomePage() {
                   <button
                     key={t}
                     onClick={() => { setTicker(t); handleEvaluateDirect(t); }}
-                    className="px-3.5 py-1.5 text-[12px] font-mono font-semibold cursor-pointer ticker-btn"
-                    style={{ background: "var(--card)", border: "1px solid var(--border)", color: "var(--text-secondary)", borderRadius: "6px" }}
+                    className="px-4 py-1.5 text-[12px] font-mono font-semibold cursor-pointer ticker-btn"
+                    style={{ background: "var(--card)", border: "1px solid var(--border)", color: "var(--text-secondary)", borderRadius: "var(--r-md)" }}
                   >
                     {t}
                   </button>
@@ -3661,7 +3613,7 @@ export default function HomePage() {
           </div>
 
           {/* ═══════ Feature Strip — 3 Cards ═══════ */}
-          <div className="w-full max-w-[900px] mx-auto px-4 sm:px-6 pb-10">
+          <div className="w-full max-w-[900px] mx-auto px-4 sm:px-6 pb-12">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {[
                 {
@@ -3674,43 +3626,38 @@ export default function HomePage() {
                   icon: "◆",
                   title: "Real Performance Tracking",
                   desc: "Track past picks, win rate, and returns compared to the S&P 500.",
-                  color: "#3b82f6",
+                  color: "var(--blue)",
                 },
                 {
                   icon: "⬡",
                   title: "Multi-Source Data",
                   desc: "Fundamentals, technicals, sentiment, and risk — all from trusted data sources.",
-                  color: "#a78bfa",
+                  color: "var(--purple)",
                 },
               ].map((card) => (
                 <div
                   key={card.title}
-                  className="rounded-xl p-5 transition-all duration-200 hover:translate-y-[-2px]"
-                  style={{
-                    background: "var(--card)",
-                    border: "1px solid var(--border)",
-                    boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
-                  }}
+                  className="card rounded-xl p-5 sm:p-6 transition-all duration-200 hover:-translate-y-0.5"
                 >
                   <div
-                    className="w-9 h-9 rounded-lg flex items-center justify-center text-base font-black mb-3"
-                    style={{ background: card.color + "12", color: card.color }}
+                    className="w-10 h-10 rounded-xl flex items-center justify-center text-[16px] font-black mb-4"
+                    style={{ background: card.color + "12", color: card.color, border: `1px solid ${card.color}20` }}
                   >
                     {card.icon}
                   </div>
-                  <h3 className="text-sm font-bold mb-1.5" style={{ color: "var(--text)" }}>{card.title}</h3>
-                  <p className="text-[12px] leading-relaxed" style={{ color: "var(--text-muted)" }}>{card.desc}</p>
+                  <h3 className="text-[14px] font-bold mb-2" style={{ color: "var(--text)" }}>{card.title}</h3>
+                  <p className="text-[13px] leading-relaxed" style={{ color: "var(--text-muted)" }}>{card.desc}</p>
                 </div>
               ))}
             </div>
           </div>
 
           {/* ═══════ Today's Top Picks ═══════ */}
-          <div className="w-full max-w-[900px] mx-auto px-4 sm:px-6 pb-10">
-            <div className="flex items-center gap-3 mb-5">
-              <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: "var(--green)" }} />
-              <h2 className="text-base font-bold" style={{ color: "var(--text)" }}>Today&apos;s Top Picks</h2>
-              <div className="flex-1 h-px ml-2" style={{ background: "var(--border)" }} />
+          <div className="w-full max-w-[900px] mx-auto px-4 sm:px-6 pb-12">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="live-dot" />
+              <h2 className="text-[15px] font-bold" style={{ color: "var(--text)" }}>Today&apos;s Top Picks</h2>
+              <div className="flex-1 h-px" style={{ background: "linear-gradient(90deg, var(--border), transparent)" }} />
             </div>
 
             {topStocksLoading ? (
@@ -3757,20 +3704,20 @@ export default function HomePage() {
                           <span className="text-[7px] font-bold opacity-50 mt-0.5" style={{ color: stock.ratingColor }}>/100</span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5">
                         <span
-                          className="text-[9px] font-bold uppercase tracking-wide px-2 py-0.5 rounded"
-                          style={{ background: stock.ratingColor + "12", color: stock.ratingColor }}
+                          className="text-[11px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-lg"
+                          style={{ background: stock.ratingColor + "12", color: stock.ratingColor, border: `1px solid ${stock.ratingColor}22` }}
                         >
                           {stock.rating}
                         </span>
                         <span
-                          className="text-[9px] font-bold px-2 py-0.5 rounded"
-                          style={{ background: riskColor + "12", color: riskColor }}
+                          className="text-[10px] font-semibold px-2 py-0.5 rounded"
+                          style={{ background: riskColor + "10", color: riskColor }}
                         >
-                          {riskFromScore} Risk
+                          {riskFromScore}
                         </span>
-                        <span className="text-[10px] font-mono ml-auto" style={{ color: stock.changePercent >= 0 ? "var(--green)" : "var(--red)" }}>
+                        <span className="text-[11px] font-mono font-bold ml-auto" style={{ color: stock.changePercent >= 0 ? "var(--green)" : "var(--red)" }}>
                           {stock.changePercent >= 0 ? "+" : ""}{stock.changePercent.toFixed(2)}%
                         </span>
                       </div>
@@ -3849,12 +3796,12 @@ export default function HomePage() {
           </div>
 
           {/* ═══════ News ═══════ */}
-          <div className="w-full max-w-[900px] mx-auto px-4 sm:px-6 pt-2 pb-10">
-            <div className="flex items-center gap-2.5 mb-5">
+          <div className="w-full max-w-[900px] mx-auto px-4 sm:px-6 pt-2 pb-12">
+            <div className="flex items-center gap-2.5 mb-6">
               <div className="w-2 h-2 rounded-full" style={{ background: "var(--blue)" }} />
-              <h2 className="text-sm font-bold" style={{ color: "var(--text)" }}>Market News</h2>
-              <div className="flex-1 h-px ml-2" style={{ background: "var(--border)" }} />
-              <span className="text-[10px] font-medium" style={{ color: "var(--text-dim)" }}>
+              <h2 className="text-[15px] font-bold" style={{ color: "var(--text)" }}>Market News</h2>
+              <div className="flex-1 h-px" style={{ background: "linear-gradient(90deg, var(--border), transparent)" }} />
+              <span className="text-[11px] font-medium" style={{ color: "var(--text-dim)" }}>
                 Yahoo Finance
               </span>
             </div>
@@ -3920,12 +3867,11 @@ export default function HomePage() {
 
       {/* ═══════ Error ═══════ */}
       {error && (
-        <div className="max-w-xl mx-auto px-4 sm:px-6 mb-4 relative z-10">
-          <div
-            className="rounded-xl p-3 text-sm font-medium animate-fade-in flex items-center gap-2"
-            style={{ background: "rgba(239, 68, 68, 0.06)", border: "1px solid rgba(239, 68, 68, 0.15)", color: "var(--red)" }}
-          >
-            <span className="flex-shrink-0">!</span>
+        <div className="max-w-xl mx-auto px-4 sm:px-6 mb-5 relative z-10">
+          <div className="toast toast-error animate-fade-in">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="flex-shrink-0">
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
             <span>{error}</span>
           </div>
         </div>
