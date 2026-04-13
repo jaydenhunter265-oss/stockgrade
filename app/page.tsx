@@ -3472,7 +3472,7 @@ export default function HomePage() {
               <button
                 type="submit"
                 disabled={loading || !ticker.trim()}
-                className="btn-primary px-4 py-2 text-[12px] whitespace-nowrap flex-shrink-0"
+                className="btn-primary btn-sm flex-shrink-0"
               >
                 {loading ? <span className="pulse-glow">…</span> : "Analyze"}
               </button>
@@ -3483,7 +3483,7 @@ export default function HomePage() {
             {searched && (
               <button
                 onClick={goHome}
-                className="btn-ghost text-[12px] font-semibold px-3 py-1.5 hidden md:flex items-center gap-1.5"
+                className="btn-ghost btn-sm hidden md:flex"
               >
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                   <path d="M15 18l-6-6 6-6"/>
@@ -3570,7 +3570,7 @@ export default function HomePage() {
                     <button
                       type="submit"
                       disabled={loading || !ticker.trim()}
-                      className="btn-primary m-1.5 px-6 sm:px-8 py-2.5 sm:py-3 text-sm rounded"
+                      className="btn-primary m-2 btn-lg"
                     >
                       {loading ? <span className="pulse-glow">Analyzing...</span> : "Analyze Stock"}
                     </button>
@@ -3613,7 +3613,7 @@ export default function HomePage() {
           </div>
 
           {/* ═══════ Feature Strip — 3 Cards ═══════ */}
-          <div className="w-full max-w-[900px] mx-auto px-4 sm:px-6 pb-12">
+          <div className="w-full max-w-[900px] mx-auto px-4 sm:px-6 pt-2 pb-12">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {[
                 {
@@ -3832,7 +3832,8 @@ export default function HomePage() {
           <div className="flex gap-2.5 max-w-2xl mx-auto px-4 sm:px-6 md:hidden">
             <button
               onClick={goHome}
-              className="btn-ghost px-4 py-3 font-bold text-sm flex-shrink-0"
+              className="btn-ghost flex-shrink-0"
+              style={{ minWidth: 38 }}
             >
               &#8592;
             </button>
@@ -3856,7 +3857,7 @@ export default function HomePage() {
               <button
                 type="submit"
                 disabled={loading || !ticker.trim()}
-                className="btn-primary px-6 py-3 text-sm whitespace-nowrap flex-shrink-0"
+                className="btn-primary flex-shrink-0"
               >
                 {loading ? <span className="pulse-glow">...</span> : "Analyze"}
               </button>

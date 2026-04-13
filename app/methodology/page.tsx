@@ -107,7 +107,7 @@ export default function MethodologyPage() {
           </div>
 
           <div className="ml-auto">
-            <Link href="/" className="btn-ghost text-[12px] font-semibold px-3 py-1.5 flex items-center gap-1.5">
+            <Link href="/" className="btn-ghost btn-sm flex items-center">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                 <path d="M15 18l-6-6 6-6"/>
               </svg>

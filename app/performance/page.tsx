@@ -247,7 +247,7 @@ export default function PerformancePage() {
           </div>
 
           <div className="ml-auto flex items-center gap-2">
-            <Link href="/" className="btn-ghost text-[12px] font-semibold px-3 py-1.5 flex items-center gap-1.5">
+            <Link href="/" className="btn-ghost btn-sm flex items-center">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                 <path d="M15 18l-6-6 6-6"/>
               </svg>
@@ -346,7 +346,7 @@ export default function PerformancePage() {
             </p>
             <Link
               href="/"
-              className="btn-primary mt-5 px-5 py-2.5 text-[13px] inline-flex items-center gap-2"
+              className="btn-primary mt-5"
             >
               Analyze a Stock →
             </Link>
@@ -466,7 +466,7 @@ export default function PerformancePage() {
                 </div>
                 <button
                   onClick={() => setSelectedStock('')}
-                  className="btn-ghost px-3 py-1.5 text-[12px] flex items-center gap-1.5"
+                  className="btn-ghost btn-sm"
                 >
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                     <path d="M15 18l-6-6 6-6"/>
@@ -540,7 +540,7 @@ export default function PerformancePage() {
           </p>
           <Link
             href="/"
-            className="btn-primary inline-flex items-center gap-2 px-6 py-3 text-[14px]"
+            className="btn-primary btn-lg"
           >
             Start Analyzing
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
